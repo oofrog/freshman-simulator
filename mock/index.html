@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>수강신청 목업</title>
+<!--
+  개발용 목업: 실제 수강신청 화면의 구조·흐름만 참고해 새로 작성. 과목·인물 데이터는 모두 가상.
+  확장이 붙을 지점(메뉴 a[title], 버튼 value 문구, #gdMain 등)은 실제 화면과 같게 유지.
+  알림 문구는 실제 문구를 확인하기 전까지 임시.
+-->
+<style>
+  :root { --navy: #1f3a5f; --line: #c9d1db; --head: #eef2f7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 12px/1.5 sans-serif; color: #222; background: #fff; }
+  #logo-area { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: var(--navy); color: #fff; }
+  #logo-area h2 { margin: 0; font-size: 18px; }
+  #logo-area h2 span { color: #9cc3ff; }
+  .mock-badge { background: #f59e0b; color: #000; padding: 2px 6px; border-radius: 4px; margin-right: 8px; font-weight: bold; }
+  .left-area { display: flex; align-items: center; }
+  .right-area { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .right-area a { color: #fff; }
+  #wrap { display: flex; min-height: calc(100vh - 50px); }
+  #snb { width: 170px; flex: none; background: #f6f8fb; border-right: 1px solid var(--line); padding: 12px 0; }
+  #snb ul { list-style: none; margin: 0; padding: 0; }
+  #snb li a { display: block; padding: 8px 16px; color: #222; text-decoration: none; }
+  #snb li a.on { background: var(--navy); color: #fff; font-weight: bold; }
+  .credits { margin: 16px; padding: 8px; border: 1px solid var(--line); background: #fff; }
+  .credits div { display: flex; justify-content: space-between; margin: 2px 0; }
+  .credits input { width: 40px; text-align: right; }
+  #content-wrap { flex: 1; min-width: 0; padding: 12px 16px; }
+  .header h3 { margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--navy); font-size: 16px; }
+  .hyinTemplate { margin-bottom: 12px; }
+  .search-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; background: var(--head); border: 1px solid var(--line); margin-bottom: 10px; }
+  .grid-wrap { overflow-x: auto; }
+  table.grid { border-collapse: collapse; white-space: nowrap; }
+  .grid th, .grid td { border: 1px solid var(--line); padding: 4px 6px; text-align: center; }
+  .grid th { background: var(--head); }
+  .grid td.empty { padding: 20px; color: #888; }
+  .grid td.hidden-type { display: none; }
+  input[type=button] { cursor: pointer; padding: 2px 8px; border: 1px solid #8a9bb0; background: #fff; border-radius: 3px; }
+  input[type=button].blue { background: #2f6fd6; border-color: #2f6fd6; color: #fff; }
+  .notice { color: #b45309; margin: 6px 0; }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+  #dev-guide { position: fixed; right: 16px; bottom: 16px; padding: 8px 12px; background: #111827; color: #fff; border: 0; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div id="logo-area">
+  <div class="left-area"><span class="mock-badge">연습용 목업</span><h2>2026년 <span>1학기</span> 수강신청</h2></div>
+  <div class="right-area">
+    <span><b>학번:</b> 2026000000</span>
+    <span><b>학년(반):</b> 1(3)</span>
+    <span><b>성명:</b> 새내기</span>
+    <a href="#">로그아웃</a>
+    <span>수업번호</span>
+    <input type="text" id="edQuickSuupNo" size="7">
+    <input type="button" id="btn_save_quick" class="blue" value="신청" data-act="quick">
+    <span>모의수강 참여여부: N</span>
+  </div>
+</div>
+<div id="wrap">
+  <div id="snb">
+    <ul id="menu"></ul>
+    <div class="credits">
+      <div><span>최소학점</span><input id="edMinHakjeom" readonly></div>
+      <div><span>최대학점</span><input id="edMaxHakjeom" readonly></div>
+      <div><span>신청학점</span><input id="edSincheongHakjeom" readonly></div>
+    </div>
+  </div>
+  <div id="content-wrap"><div id="hyinContents"></div></div>
+</div>
+<!-- 확장 아이콘 클릭 대신: extension/files.js의 파일을 차례로 불러오고 켜기/끄기 (data-sg라 차단 대상에서 빠짐) -->
+<input type="button" id="dev-guide" value="🧪 확장 켜기/끄기" data-sg>
+
+<script>
+const ME = { dept: '소프트웨어학부', min: 10, max: 20, gyoyangMax: 10 }; // 26학번 1학년, 개강 전 교양 10학점 제한
+
+const K = 'no code name type area dept year cls prof credit lec lab time room cap enrolled hope limit'.split(' ');
+const C = [
+  ['10101', 'SWE1001', '프로그래밍기초', '전공기초', '', '소프트웨어학부', 1, 1, '김하늘', 3, 2, 2, '월(09:00-11:00) 수(09:00-11:00)', '공학관 301호', 45, 0, 52, '1학년 허용 / 소프트웨어학부만'],
+  ['10102', 'SWE1001', '프로그래밍기초', '전공기초', '', '소프트웨어학부', 1, 2, '김하늘', 3, 2, 2, '화(13:00-15:00) 목(13:00-15:00)', '공학관 301호', 45, 0, 38, '1학년 허용 / 소프트웨어학부만'],
+  ['10103', 'SWE1002', '이산수학', '전공기초', '', '소프트웨어학부', 1, 1, '이도윤', 3, 3, 0, '화(09:00-10:30) 목(09:00-10:30)', '공학관 205호', 60, 0, 64, ''],
+  ['10104', 'SWE1003', '컴퓨터과학개론', '전공핵심', '', '소프트웨어학부', 1, 1, '박서연', 3, 3, 0, '월(13:00-14:30) 수(13:00-14:30)', '공학관 402호', 60, 0, 57, ''],
+  ['20001', 'GEN1001', '대학글쓰기', '교양필수', '기초영역', '교양교육센터', 1, 3, '최민지', 2, 2, 0, '금(10:00-12:00)', '인문관 110호', 35, 0, 40, '1학년 허용 / 3반 대상'],
+  ['20002', 'GEN1002', 'AI와사고', '교양필수', '기초영역', '교양교육센터', 1, 3, '한지호', 2, 2, 0, '목(15:00-17:00)', '공학관 PC실', 40, 0, 41, ''],
+  ['20003', 'GEN1003', '영어회화1', '교양필수', '기초영역', '교양교육센터', 1, 3, 'Emily Park', 2, 2, 0, '화(15:00-17:00)', '국제관 204호', 25, 1, 27, '영어등급별 반 배정'],
+  ['30001', 'GEN2101', '영화로읽는심리학', '교양선택', '인간이해영역', '교양교육센터', 1, 1, '문수아', 3, 3, 0, '월(10:30-12:00) 수(10:30-12:00)', '인문관 201호', 40, 31, 176, ''],
+  ['30002', 'GEN2102', '생활속의경제학', '교양선택', '사회이해영역', '교양교육센터', 1, 1, '이서준', 3, 3, 0, '화(10:30-12:00) 목(10:30-12:00)', '경상관 201호', 50, 12, 64, ''],
+  ['30003', 'GEN2103', '테니스', '교양선택', '자기인식영역', '교양교육센터', 1, 1, '오지훈', 2, 0, 2, '월(11:00-13:00)', '테니스장', 30, 30, 88, ''],
+  ['30004', 'GEN2104', '미술과치유', '교양선택', '예술영역', '교양교육센터', 1, 1, '윤채원', 2, 2, 0, '수(15:00-17:00)', '예술관 302호', 25, 16, 140, ''],
+  ['30005', 'GEN2105', '창업아이디어발상', '교양선택', '미래기술영역', '교양교육센터', 1, 1, '장민호', 3, 3, 0, '금(13:00-16:00)', '창업센터 세미나실', 60, 5, 30, ''],
+  ['30006', 'GEN2106', '데이터시각화입문', '교양선택', '미래기술영역', '교양교육센터', 1, 1, '서지안', 3, 2, 2, '목(09:00-12:00)', '공학관 PC실', 40, 22, 95, ''],
+  ['30007', 'GEN2107', '세계사의장면들', '교양선택', '역사영역', '교양교육센터', 1, 1, '임도현', 3, 3, 0, '월(15:00-16:30) 수(15:00-16:30)', '인문관 305호', 80, 44, 70, ''],
+  ['40001', 'BUS1001', '경영학원론', '전공기초', '', '경영학부', 1, 1, '강예린', 3, 3, 0, '화(09:00-10:30) 목(09:00-10:30)', '경상관 101호', 70, 0, 85, '경영학부 1학년만 허용'],
+  ['40002', 'DES1001', '디자인씽킹', '전공기초', '', '디자인학부', 1, 1, '조하은', 3, 1, 2, '금(09:00-12:00)', '디자인관 201호', 30, 0, 26, ''],
+].map(r => Object.fromEntries(K.map((k, i) => [k, r[i]])));
+const byNo = Object.fromEntries(C.map(c => [c.no, c]));
+
+let hope = ['30001', '30004', '30006', '30007', '10101', '10102', '30002']; // A안·B안 섞어 담아 둔 상태
+let done = ['20003']; // 이미 1과목 신청된 상태 (신청내역·수강취소 화면 확인용)
+const found = {}, query = {}; // 페이지별 조회 결과·조건 (화면 이동해도 유지)
+const sum = type => done.map(n => byNo[n]).filter(c => !type || c.type.startsWith(type)).reduce((s, c) => s + c.credit, 0);
+
+// ---------- 표 열 정의 ----------
+const btn = (v, act, c, cls = '') => `<input type="button" class="${cls}" value="${v}" data-act="${act}" data-no="${c.no}">`;
+const col = {
+  check: ['<input type="checkbox" id="chooseAll">', () => '<input type="checkbox" name="editBox">'],
+  order: ['정렬순서', () => `<select class="orderSeq"><option value="">선택</option>${hope.map((_, j) => `<option>${j + 1}</option>`).join('')}</select>`],
+  apply: ['수강신청', c => btn('신청', 'apply', c, 'blue')],
+  hopeAdd: ['희망신청', c => btn('추가', 'hopeAdd', c)],
+  hopeDel: ['희망수업 삭제', c => btn('희망삭제', 'hopeDel', c)],
+  cancel: ['수강취소', c => btn('수강취소', 'cancel', c)],
+  year: ['학년', c => c.year], cls: ['반', c => c.cls],
+  type: ['이수구분', c => c.type], area: ['영역', c => c.area],
+  no: ['수업번호', c => c.no], code: ['학수번호', c => c.code], name: ['교과목명', c => c.name],
+  prof: ['교강사', c => c.prof], credit: ['학점', c => c.credit], lec: ['강의', c => c.lec], lab: ['실습', c => c.lab],
+  seat: ['수강/<br>정원', c => `${c.enrolled}/${c.cap}`],
+  enrolled: ['신청인원', c => c.enrolled], cap: ['제한인원', c => c.cap], hope: ['희망인원', c => c.hope],
+  retake: ['재수강<br>여부', () => 'N'],
+  time: ['수업시간', c => c.time], room: ['강의실', c => c.room],
+  limit: ['이수제한<br>여부', c => c.limit ? `<a href="#" data-act="limit" data-no="${c.no}">O</a>` : ''],
+  dept: ['설강학과', c => c.dept],
+};
+// 'hidden': 실제 수강신청 표처럼 머리글 없는 숨김 칸(td.hidden-type) 3개를 끼워 넣음 → 확장이 칸 위치를 제대로 세는지 확인용
+const cellHtml = (k, c, i) => k === 'hidden' ? '<td class="hidden-type">1</td>'.repeat(3) : `<td>${col[k][1](c, i)}</td>`;
+const grid = (keys, rows, id = 'gdMain') => `<div class="grid-wrap"><table id="${id}" class="grid">
+  <thead><tr>${keys.filter(k => k !== 'hidden').map(k => `<th>${col[k][0]}</th>`).join('')}</tr></thead>
+  <tbody>${rows.length ? rows.map((c, i) => `<tr data-no="${c.no}">${keys.map(k => cellHtml(k, c, i)).join('')}</tr>`).join('')
+    : `<tr><td class="empty" colspan="${keys.length}">조회를 하지 않았거나 조회된 데이터가 없습니다</td></tr>`}</tbody></table></div>`;
+
+const opts = (list, v) => list.map(o => `<option${o === v ? ' selected' : ''}>${o}</option>`).join('');
+const searchBox = (page, q = query[page] || {}) => `<div class="search-box" data-page="${page}">
+  <label>과목구분 <select name="gubun">${opts(['전체', '공통과목(교양)', '학과과목(전공)'], q.gubun)}</select></label>
+  <label>이수구분 <select name="type">${opts(['전체', '교양필수', '교양선택', '전공기초', '전공핵심'], q.type)}</select></label>
+  <label>학수번호 <input name="code" size="8" value="${q.code || ''}"></label>
+  <label>교과목명 <input name="name" size="12" value="${q.name || ''}"></label>
+  <input type="button" value="초기화" data-act="reset">
+  <input type="button" class="blue" value="조  회" data-act="search">
+</div>`;
+
+// ---------- 화면 ----------
+const PAGES = [
+  ['pyunram', '수강편람', () => searchBox('pyunram') + grid(['year', 'cls', 'type', 'area', 'no', 'code', 'name', 'prof', 'credit', 'lec', 'lab', 'seat', 'time', 'room', 'limit', 'dept'], found.pyunram || [])],
+  ['guide', '수강안내', () => '<p>목업에서는 생략. 실제 수강안내 내용은 CLAUDE.md의 "학교 수강신청 규칙" 참고.</p>'],
+  ['basic', '기본수업', () => `<div class="toolbar"><input type="button" id="btn_dongil" value="동일/대치 교과목 확인" data-act="dongil"></div>
+    <h4>기본수업조회</h4>` + grid(['apply', 'year', 'cls', 'type', 'no', 'code', 'name', 'hopeAdd', 'prof', 'credit', 'lec', 'lab', 'seat', 'time', 'room', 'limit', 'dept'],
+      C.filter(c => c.type === '교양필수' || (c.dept === ME.dept && c.year === 1)))],
+  ['apply', '수강신청', () => searchBox('apply') + grid(['apply', 'hidden', 'year', 'cls', 'type', 'area', 'no', 'code', 'name', 'hopeAdd', 'prof', 'credit', 'lec', 'lab', 'seat', 'time', 'room', 'limit', 'dept'], found.apply || [])],
+  ['hope', '희망수업', () => `<div class="toolbar">
+      <input type="button" id="btn_siganpyo" value="선택과목 시간표보기" data-act="todo">
+      <input type="text" id="edGwamok" size="2" readonly value="${hope.length}"> 과목 /
+      <input type="text" id="edHakjeom" size="2" readonly value="${hope.reduce((s, n) => s + byNo[n].credit, 0)}"> 학점</div>
+    <p class="notice">◎ 희망수업추가 이후에 시간표, 이수제한이 변경될 수도 있으므로, 반드시 수강신청 전에 최종확인을 하시기 바랍니다.</p>
+    <div class="toolbar"><input type="button" id="btn_save" value="정렬순서저장" data-act="orderSave"></div>`
+    + grid(['check', 'order', 'apply', 'enrolled', 'cap', 'hope', 'type', 'area', 'no', 'code', 'name', 'hopeDel', 'retake', 'prof', 'credit', 'time', 'room', 'limit', 'dept'], hope.map(n => byNo[n]))],
+  ['done', '신청내역', () => `<div class="toolbar"><input type="button" value="신청과목시간표확인" data-act="todo"></div>`
+    + grid(['cancel', 'type', 'area', 'no', 'code', 'name', 'prof', 'credit', 'lec', 'lab', 'seat', 'time', 'room', 'dept'], done.map(n => byNo[n]))],
+];
+const FIRST = 'pyunram'; // 첫 화면 (실제 로그인 직후 화면은 확인 필요)
+
+document.getElementById('menu').innerHTML = PAGES.map(([k, t]) => `<li><a href="#!${k}" title="${t}">${t}</a></li>`).join('');
+
+function render() {
+  const key = location.hash.slice(2);
+  const [k, title, view] = PAGES.find(p => p[0] === key) || PAGES.find(p => p[0] === FIRST);
+  document.querySelectorAll('#menu a').forEach(a => a.classList.toggle('on', a.title === title));
+  document.getElementById('hyinContents').innerHTML = `<div class="header"><h3 class="txt_title">${title}</h3></div><div class="hyinTemplate">${view()}</div>`;
+  edMinHakjeom.value = ME.min; edMaxHakjeom.value = ME.max; edSincheongHakjeom.value = sum();
+}
+addEventListener('hashchange', render);
+
+// ---------- 동작 ----------
+function apply(c) {
+  if (!c) return alert('해당 수업번호가 없습니다.');
+  if (done.some(n => byNo[n].code === c.code)) return alert('이미 신청한 과목입니다.');
+  if (c.enrolled >= c.cap) return alert('정원이 초과되었습니다.');
+  if (sum() + c.credit > ME.max) return alert(`최대 신청학점(${ME.max}학점)을 초과합니다.`);
+  if (c.type.startsWith('교양') && sum('교양') + c.credit > ME.gyoyangMax) return alert(`개강 전에는 교양을 최대 ${ME.gyoyangMax}학점까지 신청할 수 있습니다.`);
+  // ponytail: 시간 중복 검사는 생략. 실전 재현 기능(가짜 모달)에서 다룰 예정
+  c.enrolled++; done.push(c.no);
+  alert('신청되었습니다.');
+}
+
+const ACT = {
+  apply: c => apply(c),
+  quick: () => apply(byNo[edQuickSuupNo.value.trim()]),
+  hopeAdd: c => hope.includes(c.no) ? alert('이미 희망수업에 담긴 과목입니다.') : (hope.push(c.no), c.hope++, alert('희망수업에 추가되었습니다.')),
+  hopeDel: c => { hope = hope.filter(n => n !== c.no); c.hope--; },
+  cancel: c => { if (confirm(`${c.name} 수강을 취소하시겠습니까?`)) { done = done.filter(n => n !== c.no); c.enrolled--; } },
+  limit: c => alert(`[이수제한] ${c.limit}`),
+  orderSave: () => {
+    // 번호를 고른 과목이 앞으로, 안 고른 과목은 기존 순서대로 뒤에
+    const rank = [...document.querySelectorAll('.orderSeq')].map((s, i) => [hope[i], s.value ? +s.value : 99 + i]);
+    hope = rank.sort((a, b) => a[1] - b[1]).map(r => r[0]);
+    alert('정렬순서가 저장되었습니다.');
+  },
+  dongil: () => alert('동일/대치 교과목으로 지정된 이수 과목이 없습니다.'),
+  todo: () => alert('목업에서는 아직 지원하지 않는 기능입니다.'),
+  reset: (_, el) => { delete query[el.parentNode.dataset.page]; },
+  search: (_, el) => {
+    const box = el.parentNode, f = n => box.querySelector(`[name=${n}]`).value.trim();
+    query[box.dataset.page] = { gubun: f('gubun'), type: f('type'), code: f('code'), name: f('name') };
+    found[box.dataset.page] = C.filter(c =>
+      (f('gubun') === '전체' || (f('gubun') === '공통과목(교양)') === c.type.startsWith('교양')) &&
+      (f('type') === '전체' || c.type === f('type')) &&
+      c.code.includes(f('code').toUpperCase()) && c.name.includes(f('name')));
+  },
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  e.preventDefault();
+  ACT[el.dataset.act](byNo[el.dataset.no], el);
+  render();
+});
+
+async function devToggle() {
+  if (!window.SG) {
+    const load = src => new Promise((ok, fail) => document.body.append(Object.assign(document.createElement('script'), { src, onload: ok, onerror: fail })));
+    await load('../extension/files.js');
+    for (const f of SG_FILES) await load('../extension/' + f);
+  }
+  SG.toggle();
+}
+document.getElementById('dev-guide').addEventListener('click', devToggle);
+// ?sg → 열자마자 확장 켜기, ?sg=practice 처럼 모드 이름을 주면 그 모드까지 시작 (자동 새로고침과 같이 쓰기)
+const autoMode = new URLSearchParams(location.search).get('sg');
+if (autoMode !== null) devToggle().then(() => autoMode && SG.start(autoMode));
+
+render();
+</script>
+</body>
+</html>

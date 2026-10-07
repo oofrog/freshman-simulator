@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "수강신청 연습 (데모)",
+  "version": "0.2",
+  "description": "수강신청 화면 위에서 튜토리얼·실전 재현·팁으로 연습합니다. 실제 신청은 되지 않습니다.",
+  "permissions": ["activeTab", "scripting"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "수강신청 연습 켜기/끄기" }
+}
