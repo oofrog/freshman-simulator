@@ -3,3 +3,19 @@ __pycache__/
 화면/
 *.xlsx
 CLAUDE.md
+
+# 에디터·OS (팀원별)
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini
+
+# 도구 산출물
+node_modules/
+.archify/
+
+# 확장 패키징 (.pem은 확장 서명 키)
+*.crx
+*.pem
+*.zip
