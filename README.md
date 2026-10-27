@@ -17,6 +17,7 @@
 - **크롬 확장으로 (가끔 최종 확인)**: 아래처럼 로드한 뒤, 코드를 고치면 `chrome://extensions`의 ↻ → 페이지 새로고침 → 아이콘.
   목업에서 확장 아이콘을 쓸 때는 🧪 버튼을 같이 누르지 않는다 (확장이 두 개 따로 뜸).
 - **크롬 확장으로**: `chrome://extensions` → 개발자 모드 → 압축해제된 확장 프로그램 로드 → `extension/` 선택 → 아이콘 클릭.
+- **판정 스크립트**: 레포 폴더에서 `node --test` (Node 18 이상, 설치할 것 없음). `test/` 아래 `*.test.js`를 모두 돌린다.
 
 ## 파일과 담당
 | 파일 | 내용 | 담당 |
@@ -27,8 +28,11 @@
 | `extension/tips.js` | 팁 데이터 (형식은 파일 맨 위 주석) | 최지범 |
 | `extension/modes/tip.js` | 자유 팁 (#6) | 최지범 |
 | `extension/modes/tutorial.js` | 튜토리얼 (#7). 지금은 뼈대 (수강편람 이동 → 팁 2개 → 끝) | 최지범 |
-| `extension/modes/practice.js` | 실전 재현 (#8·#9). 지금은 Walking Skeleton (가짜 버튼 → 성공 모달) | 박태현 |
+| `extension/engine.js` | 실전 재현 엔진: 과목별 마감 시각·남은 자리 계산 (화면과 분리된 순수 함수, `SG.engine`). 모델 값은 임시 | 박태현 |
+| `extension/modes/practice.js` | 실전 재현 (#8·#9). 지금은 카운트다운 → 가짜 [신청] → 실제 모양 시스템 메시지 (마감 시각이 지나면 정원 초과). 실제처럼 남은 자리는 안 보여 줌 | 박태현 |
+| `test/engine.test.js` | 엔진 판정 스크립트 (같은 입력 → 같은 결과, 경쟁률 높은 과목이 먼저 마감) | 박태현 |
 | `extension/docs/selectors.md` | 선택자 대조표 (#4) | 강준우 |
+| `extension/docs/real-screen.md` | 실제 화면의 팝업·신청 흐름 정리, 아직 필요한 데이터 | 박태현 |
 
 ## 모드 만드는 법
 ```js
