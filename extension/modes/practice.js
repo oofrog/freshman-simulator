@@ -102,15 +102,18 @@
     document.body.append(banner);
     me.extras.push(banner);
     me.openAt = performance.now() + COUNTDOWN * 1000;
+    // 숫자가 바뀌는 순간에 맞춰 다시 부른다. 인기 과목은 0.3초쯤에 마감되므로 '시작!'이 늦게 뜨면 안 된다
     const tick = () => {
       const t = elapsed(me);
-      if (t < 0) return void (banner.textContent = `수강신청 시작까지 ${Math.ceil(-t)}초`);
-      clearInterval(me.timer);
-      banner.textContent = '수강신청 시작!';
-      me.timer = setTimeout(() => banner.remove(), 2000);
+      if (t >= 0) {
+        banner.textContent = '수강신청 시작!';
+        me.timer = setTimeout(() => banner.remove(), 2000);
+        return;
+      }
+      banner.textContent = `수강신청 시작까지 ${Math.ceil(-t)}초`;
+      me.timer = setTimeout(tick, (-t % 1 || 1) * 1000 + 1);
     };
     tick();
-    me.timer = setInterval(tick, 100);
   };
 
   SG.register('practice', {
@@ -165,7 +168,7 @@
     },
     stop() {
       if (!s) return;
-      clearInterval(s.timer);
+      clearTimeout(s.timer);
       s.rows.forEach(r => {
         r.fake.remove();
         if (r.host) r.host.style.display = r.display;
