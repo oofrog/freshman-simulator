@@ -1,12 +1,12 @@
 // 실전 재현 모드 (#8·#9, 담당: 박태현)
 // 희망수업의 [신청]을 가짜 버튼으로 바꾸고(이미 신청해서 버튼이 없는 행에도 넣음), 카운트다운 뒤 신청이 열린다.
 // 실제 화면처럼 남은 자리는 보여 주지 않고, 마감 여부는 [신청]을 눌렀을 때 메시지로만 알려 준다.
-// 과목별 마감 시각 계산은 화면과 분리된 engine.js (SG.engine)
+// 시작 배너가 사라진 자리의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 플랜 B 전환 시간)을 띄운다.
+// 마감 시각·신청 판정·결과 요약 계산은 화면과 분리된 engine.js (SG.engine)
 // 메시지는 실제 화면의 "시스템 메시지"와 같은 모양으로 띄운다. 실제 화면 정리·아직 필요한 데이터: docs/real-screen.md
-// TODO(#9): 연습 종료 후 결과 요약
 (() => {
   const COUNTDOWN = 5; // 시작 전 카운트다운(초)
-  const { closeSec } = SG.engine;
+  const { closeSec, judge, summarize } = SG.engine;
 
   // 신청 결과 문구는 서버가 보내 줘서 화면 코드에 없다. 실제 문구를 확인하기 전까지 임시.
   const MSG = {
@@ -23,7 +23,17 @@
     .sg-sys[data-sg]{position:fixed;inset:0;z-index:2147483645;font:inherit;color:inherit}
     .sg-sys .ui-widget-overlay{position:absolute;inset:0}
     .sg-sys .ui-dialog{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px}
-    .sg-sys .ui-dialog-content{min-height:55px}`;
+    .sg-sys .ui-dialog-content{min-height:55px}
+    .sg-count .sg-btn{background:#fff;color:#111827;font-weight:bold}
+    .sg-result[data-sg]{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
+    .sg-result .sg-box{background:#fff;border-radius:10px;padding:18px 20px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 8px 24px #0005}
+    .sg-result p{margin:4px 0 8px}
+    .sg-result table{border-collapse:collapse;white-space:nowrap}
+    .sg-result th,.sg-result td{border:1px solid #ddd;padding:4px 8px;text-align:center;font-size:12px}
+    .sg-result th{background:#f3f4f6}
+    .sg-result td.done{color:#15803d;font-weight:bold}
+    .sg-result td.full{color:#dc2626;font-weight:bold}
+    .sg-result td.none{color:#888}`;
   // 목업처럼 jQuery UI 테마 CSS가 없는 화면에서만 넣는다 (값은 실제 화면에서 잰 것)
   const FALLBACK = `
     .sg-sys .ui-widget-overlay{background:#aaa;opacity:.3}
@@ -40,7 +50,9 @@
     .sg-sys .ui-button-text{display:inline-block;padding:6px 10px;font-size:9pt;color:#656565}`;
   const hasTheme = () => [...document.styleSheets].some(sh => /jquery-ui/i.test(sh.href || ''));
 
-  let s = null; // 진행 중인 연습: { rows, extras, dialog, timer, openAt(신청이 열리는 performance.now 시각, 카운트다운 전에는 0) }
+  // 진행 중인 연습: { rows, clicks, extras, dialog, timer, openAt, done }
+  // openAt: 신청이 열리는 performance.now 시각 (카운트다운 전에는 0), clicks: 누른 기록 (엔진 summarize 형식), done: 결과 요약을 띄움
+  let s = null;
 
   const num = (tr, col) => parseInt((SG.cell(tr, col)?.textContent || '').replace(/\D/g, ''), 10);
   const h = (tag, className, ...kids) => {
@@ -90,11 +102,41 @@
 
   // 마감 여부는 누른 순간의 시각으로 정한다. 마감이면 실제 화면처럼 [신청]이 그대로 남는다
   const apply = row => {
+    if (s.done) return;
     const t = elapsed(s);
-    if (t < 0) return sysMessage(MSG.notOpen);
-    if (t >= row.closeSec) return sysMessage(MSG.full);
-    row.fake.style.display = 'none'; // 실제 화면도 신청에 성공하면 그 행의 [신청] 버튼을 숨긴다
-    return sysMessage(MSG.done);
+    s.clicks.push({ course: s.rows.indexOf(row), t });
+    const result = judge(row.hope, row.cap, t);
+    if (result === 'done') row.fake.style.display = 'none'; // 실제 화면도 신청에 성공하면 그 행의 [신청] 버튼을 숨긴다
+    return sysMessage(MSG[result]);
+  };
+
+  // 결과 요약: 과목마다 결과·누른 시각·마감·차이·플랜 B 전환 시간. [다시 하기]는 처음부터, [닫기]는 연습을 끝내고 화면을 되돌린다
+  const RESULT = { done: '성공', full: '정원 초과', none: '안 누름' };
+  const sec = x => `${x.toFixed(2)}초`;
+  const finish = me => {
+    me.done = true;
+    clearTimeout(me.timer);
+    me.dialog?.remove();
+    const sum = summarize(me.rows, me.clicks);
+    const count = k => sum.filter(r => r.result === k).length;
+    const td = (text, className = '') => h('td', className, text);
+    const lines = sum.map((r, i) => {
+      const gap = r.at === null || r.close === Infinity ? '—' : r.close > r.at ? `${sec(r.close - r.at)} 여유` : `${sec(r.at - r.close)} 늦음`;
+      const planB = r.result !== 'full' ? '—' : r.planB === null ? '안 바꿈' : sec(r.planB);
+      return h('tr', '', td(me.rows[i].label), td(RESULT[r.result], r.result), td(r.at === null ? '—' : sec(r.at)),
+        td(r.close === Infinity ? '안 참' : sec(r.close)), td(gap), td(planB));
+    });
+    const button = (text, onclick) => SG.el('button', { className: 'sg-btn', textContent: text, onclick });
+    const box = SG.el('div', { className: 'sg-result' },
+      h('div', 'sg-box',
+        h('b', '', '연습 결과'),
+        h('p', '', `성공 ${count('done')}과목 · 정원 초과 ${count('full')}과목 · 안 누름 ${count('none')}과목`),
+        h('table', '',
+          h('thead', '', h('tr', '', ...['과목', '결과', '누른 시각 (시작 후)', '마감', '차이', '플랜 B 전환'].map(t => h('th', '', t)))),
+          h('tbody', '', ...lines)),
+        h('div', 'sg-row', button('다시 하기', () => SG.start('practice')), button('닫기', () => SG.stop()))));
+    document.body.append(box);
+    me.extras.push(box);
   };
 
   const run = me => {
@@ -107,7 +149,8 @@
       const t = elapsed(me);
       if (t >= 0) {
         banner.textContent = '수강신청 시작!';
-        me.timer = setTimeout(() => banner.remove(), 2000);
+        const end = SG.el('button', { className: 'sg-btn', textContent: '연습 끝내기', onclick: () => finish(me) });
+        me.timer = setTimeout(() => banner.replaceChildren(end), 2000);
         return;
       }
       banner.textContent = `수강신청 시작까지 ${Math.ceil(-t)}초`;
@@ -123,7 +166,7 @@
         SG.goMenu('희망수업');
         await SG.waitFor(() => SG.screen() === '희망수업' && SG.rows().length);
       }
-      const me = s = { rows: [], extras: [], dialog: null, timer: 0, openAt: 0 };
+      const me = s = { rows: [], clicks: [], extras: [], dialog: null, timer: 0, openAt: 0, done: false };
       const trs = SG.rows();
       const sample = trs.map(tr => SG.findButton(tr, '신청')).find(Boolean);
       const look = sample ? lookOf(sample) : REAL_LOOK;
@@ -132,8 +175,11 @@
         const cell = SG.cell(tr, '수강신청');
         if (!real && !cell) continue;
         const hope = num(tr, '희망인원'), cap = num(tr, '제한인원');
+        const name = SG.cell(tr, '교과목명')?.textContent.trim() || '이 과목';
+        const no = SG.cell(tr, '수업번호')?.textContent.trim();
         const row = {
-          name: SG.cell(tr, '교과목명')?.textContent.trim() || '이 과목',
+          name,
+          label: no ? `${name} (${no})` : name, // 결과 요약에서 같은 이름 과목(분반)을 구분
           hope, cap,
           closeSec: closeSec(hope, cap),
         };

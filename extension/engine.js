@@ -1,5 +1,5 @@
-// 실전 재현 엔진 (#8, 담당: 박태현) — 과목별 마감 시각·남은 자리 계산. 화면을 읽지 않는 순수 함수만 둔다.
-// 같은 입력이면 항상 같은 결과 (무작위·현재 시각을 쓰지 않음). 판정 스크립트: test/engine.test.js
+// 실전 재현 엔진 (#8·#9, 담당: 박태현) — 과목별 마감 시각·남은 자리 계산, 신청 판정, 결과 요약. 화면을 읽지 않는 순수 함수만 둔다.
+// 같은 입력이면 항상 같은 결과 (무작위·현재 시각을 쓰지 않음). 판정 스크립트: test/engine.test.js, test/summary.test.js
 // 브라우저에서는 SG.engine, 판정 스크립트(node)에서는 require로 쓴다.
 (() => {
   // 희망자가 전부 신청하지는 않는다 (플랜 B로 담아 둔 사람, 다른 과목을 먼저 잡은 사람 등).
@@ -41,7 +41,24 @@
     return cap - Math.min(cap - 1, Math.floor(hope * MODEL.show * doneBy(t)));
   };
 
-  const engine = { MODEL, closeSec, seatsLeft };
+  // 시작 후 t초에 [신청]을 눌렀을 때의 결과: 'notOpen'(시작 전) · 'full'(정원 초과) · 'done'(성공).
+  // 화면(practice.js)과 결과 요약이 같은 판정을 쓴다
+  const judge = (hope, cap, t) => t < 0 ? 'notOpen' : t >= closeSec(hope, cap) ? 'full' : 'done';
+
+  // 연습 결과 요약. courses: [{ hope, cap }], clicks: [{ course: courses의 번호, t: 시작 후 초 }] (누른 순서대로)
+  // 과목마다 { result: 'done'·'full'·'none'(안 누름), at: 처음 누른 시각, close: 마감 시각, planB } 를 courses 순서대로 돌려준다.
+  // 시작 전 클릭은 결과에 넣지 않는다. 마감 전에 누르면 성공하고 [신청]이 사라지므로 처음 누른 클릭이 결과를 정한다.
+  // planB: 정원 초과가 뜬 순간(처음 누른 시각)부터 다른 과목의 [신청]을 누를 때까지(초). 같은 과목을 다시 누른 건 치지 않는다. 안 바꿨으면 null
+  const summarize = (courses, clicks) => courses.map(({ hope, cap }, i) => {
+    const close = closeSec(hope, cap);
+    const first = clicks.find(k => k.course === i && k.t >= 0);
+    if (!first) return { result: 'none', at: null, close, planB: null };
+    const result = judge(hope, cap, first.t);
+    const next = result === 'full' ? clicks.slice(clicks.indexOf(first) + 1).find(k => k.course !== i) : null;
+    return { result, at: first.t, close, planB: next ? next.t - first.t : null };
+  });
+
+  const engine = { MODEL, closeSec, seatsLeft, judge, summarize };
   if (globalThis.SG) SG.engine = engine;
   else module.exports = engine;
 })();
