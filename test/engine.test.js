@@ -20,14 +20,19 @@ for (let hope = 0; hope <= 400; hope += 7) for (let cap = 1; cap <= 120; cap += 
 const ALL = [...MOCK, ...EDGE, ...GRID];
 const TIMES = [-5, 0, 0.1, 0.5, 1, 2, 3, 5, 8, 13, 21, 60, 600];
 // MODEL 값(지금은 임시)을 실제 자료로 고쳐도 판정이 유지되는지. 첫 줄이 기본값
-const MODELS = [{ half: 5, show: 0.8 }, { half: 0.5, show: 1 }, { half: 30, show: 0.7 }, { half: 5, show: 0.6 }];
+const MODELS = [
+  { show: 0.8, burst: 0.7, fast: 0.3, slow: 20 },
+  { show: 1, burst: 1, fast: 5, slow: 5 },     // 한꺼번에 몰리기만 함
+  { show: 0.7, burst: 0, fast: 0.3, slow: 60 }, // 천천히만 들어옴
+  { show: 0.6, burst: 0.9, fast: 0.1, slow: 10 },
+];
 
 const withModel = (m, fn) => {
   const was = { ...MODEL };
   Object.assign(MODEL, m);
   try { fn(); } finally { Object.assign(MODEL, was); }
 };
-const each = fn => MODELS.forEach(m => withModel(m, () => fn(`half=${m.half}, show=${m.show}`)));
+const each = fn => MODELS.forEach(m => withModel(m, () => fn(JSON.stringify(m))));
 const result = ([hope, cap]) => [closeSec(hope, cap), ...TIMES.map(t => seatsLeft(hope, cap, t))];
 // 경쟁률 비교는 나눗셈 없이 정수로: a가 더 높으면 양수
 const cmpRatio = ([ha, ca], [hb, cb]) => ha * cb - hb * ca;
@@ -48,12 +53,13 @@ test('같은 입력이면 같은 결과가 나온다', () => {
 
 test('희망/제한 비율이 높은 과목이 먼저 마감된다', () => {
   each(model => {
-    for (const a of ALL) for (const b of ALL) {
-      const r = cmpRatio(a, b), ta = closeSec(...a), tb = closeSec(...b);
+    const T = ALL.map(c => closeSec(...c)); // 과목마다 한 번만 계산해 두고 모든 쌍을 비교
+    ALL.forEach((a, i) => ALL.forEach((b, j) => {
+      const r = cmpRatio(a, b), ta = T[i], tb = T[j];
       const ok = r > 0 ? ta < tb || tb === Infinity // 비율이 낮은 과목이 마감되면, 높은 과목은 그보다 먼저 마감
         : r === 0 ? ta === tb : true;               // 비율이 같으면 같은 시각
       if (!ok) assert.fail(`${model}: 희망/제한 ${a.join('/')}(${ta}초) vs ${b.join('/')}(${tb}초)`);
-    }
+    }));
   });
   // 목업 과목 중 마감되는 것을 마감 순서대로 늘어놓으면 경쟁률 내림차순
   const order = MOCK.filter(c => closeSec(...c) < Infinity).sort((a, b) => closeSec(...a) - closeSec(...b));
@@ -74,9 +80,11 @@ test('희망 × 신청 비율이 제한 이하면 마감되지 않는다', () =>
   });
 });
 
-test('정원 20·희망 100은 금방 마감되고, 정원 50·희망 55는 차지 않는다 (기본 MODEL)', () => {
-  // 신청할 사람의 절반이 신청을 마치기도 전에 마감
-  assert.ok(closeSec(100, 20) < MODEL.half, `정원 20·희망 100: ${closeSec(100, 20)}초`);
+test('인기 과목은 누르기도 전에 마감되고, 경쟁률 낮은 과목은 한참 버티고, 아슬아슬한 과목은 안 찬다 (기본 MODEL)', () => {
+  // 시작을 보고 [신청]을 누르기까지 보통 0.3~1초. 정원 20·희망 100, 정원 40·희망 176은 그 전에 마감
+  for (const [hope, cap] of [[100, 20], [176, 40]]) assert.ok(closeSec(hope, cap) < 0.5, `정원 ${cap}·희망 ${hope}: ${closeSec(hope, cap)}초`);
+  // 정원 50·희망 64(1.3배)는 늦게 들어오는 신청자로 차서 30초 넘게 걸린다
+  assert.ok(closeSec(64, 50) > 30, `정원 50·희망 64: ${closeSec(64, 50)}초`);
   // 희망자가 전부 신청하지는 않아서 아슬아슬한 과목은 안 찬다
   assert.equal(closeSec(55, 50), Infinity);
   assert.ok(seatsLeft(55, 50, 600) > 0);
