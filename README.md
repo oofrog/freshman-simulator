@@ -18,6 +18,7 @@
 - **크롬 확장으로 (가끔 최종 확인)**: 아래처럼 로드한 뒤, 코드를 고치면 `chrome://extensions`의 ↻ → 페이지 새로고침 → 아이콘.
   목업에서 확장 아이콘을 쓸 때는 🧪 버튼을 같이 누르지 않는다 (확장이 두 개 따로 뜸).
 - **크롬 확장으로**: `chrome://extensions` → 개발자 모드 → 압축해제된 확장 프로그램 로드 → `extension/` 선택 → 아이콘 클릭.
+- **판정 스크립트**: 레포 폴더에서 `node --test` (Node 18 이상, 설치할 것 없음). `test/` 아래 `*.test.js`를 모두 돌린다.
 
 ## 파일과 담당
 | 파일 | 내용 | 담당 |
@@ -28,8 +29,11 @@
 | `extension/tips.js` | 팁 데이터 (형식은 파일 맨 위 주석) | 최지범 |
 | `extension/modes/tip.js` | 자유 팁 (#6) | 최지범 |
 | `extension/modes/tutorial.js` | 튜토리얼 (#7). 지금은 뼈대 (수강편람 이동 → 팁 2개 → 끝) | 최지범 |
-| `extension/modes/practice.js` | 실전 재현 (#8·#9). 지금은 Walking Skeleton (가짜 버튼 → 성공 모달) | 박태현 |
+| `extension/engine.js` | 실전 재현 엔진: 과목별 마감 시각·남은 자리 계산 (화면과 분리된 순수 함수, `SG.engine`). 모델 값은 임시 | 박태현 |
+| `extension/modes/practice.js` | 실전 재현 (#8·#9). 지금은 카운트다운 → 가짜 [신청] → 실제 모양 시스템 메시지 (마감 시각이 지나면 정원 초과). 실제처럼 남은 자리는 안 보여 줌 | 박태현 |
+| `test/engine.test.js` | 엔진 판정 스크립트 (같은 입력 → 같은 결과, 경쟁률 높은 과목이 먼저 마감) | 박태현 |
 | `extension/docs/selectors.md` | 선택자 대조표 (#4) | 강준우 |
+| `extension/docs/real-screen.md` | 실제 화면의 팝업·신청 흐름 정리, 아직 필요한 데이터 | 박태현 |
 
 ## 모드 만드는 법
 ```js
@@ -39,10 +43,11 @@ SG.register('tutorial', {
   stop() { ... },           // Esc·다른 모드·끄기 때 (화면에 바꾼 것 되돌리기)
   allow(el) { ... },        // (선택) true를 돌려준 요소는 클릭 허용. 없으면 페이지 클릭은 전부 막힘
   blocked(el) { ... },      // (선택) 막힌 클릭이 일어났을 때
+  escape() { ... },         // (선택) Esc를 눌렀을 때. 있으면 모드가 끝나지 않고 이것만 불림
 });
 ```
 - 확장이 켜져 있는 동안 페이지 클릭은 기본적으로 **전부 막힌다**. 모드가 꺼진 대기 상태에서는 메뉴 이동·조회·입력칸만 허용된다.
-- 확장이 만든 요소(`SG.el(...)`로 만든 것)는 막히지 않는다.
+- 확장이 만든 요소(`SG.el(...)`로 만든 것)는 막히지 않는다. 그 안에서 일어난 클릭 등은 페이지(학교 코드)로 올라가지 않는다.
 
 ## core가 주는 함수 (`SG.`)
 | 함수 | 용도 |
@@ -53,4 +58,4 @@ SG.register('tutorial', {
 | `goMenu('희망수업')`, `waitFor(조건함수)` | 화면 이동과 대기 |
 | `matchTip(el)`, `tipEl(tip)` | 요소 → 팁, 팁 → 요소 |
 | `highlight(el)`, `bubble(el, {title, text, buttons})`, `modal({title, text, buttons})`, `clear()` | 오버레이. `bubble`·`modal`은 누른 버튼 글자를 Promise로 돌려줌 |
-| `el(tag, props, ...children)` | 확장용 요소 만들기 (클릭 차단에서 빠짐) |
+| `el(tag, props, ...children)` | 확장용 요소 만들기 (클릭 차단에서 빠지고, 이벤트를 페이지로 올려 보내지 않음) |

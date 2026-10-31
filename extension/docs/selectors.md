@@ -24,10 +24,15 @@
 | 빠른 신청 `#edQuickSuupNo`, `#btn_save_quick` | 공통 | ✅ | ✅ |
 | 학점 요약 `#edMinHakjeom` `#edMaxHakjeom` `#edSincheongHakjeom` | 공통 | ✅ | ✅ |
 | 숨김 칸 `#gdMain td.hidden-type` | 수강신청 | ✅ | ✅ |
+| 열 "수강신청" (가짜 [신청]을 넣는 칸) — 2026-10-14 | 희망수업 | ✅ | ✅ |
+| [신청]을 감싼 `span.btn_common_wrap` — 2026-10-14 | 희망수업 | ✅ | ❌ (목업은 input만) |
+| 시스템 메시지 `.ui-dialog` 등 jQuery UI 클래스 — 2026-10-14 | 공통 | ✅ | ❌ (CSS 없음, practice.js가 대신 그림) |
 
 ## 실제 화면에서 알아 둘 점
 - 버튼은 `<input type="button" value="신청">` 형태다. 글자는 `value`에 있다. `SG.label(el)`이 알아서 읽는다.
 - 같은 id(`btn_apply` 등)가 행마다 반복된다. **id로 찾지 말고 버튼 글자로 찾는다** (`SG.findButton(행, '신청')`).
+- 페이지는 tbody에서 `#btn_apply` 클릭을 받아 진짜 신청을 보낸다. **확장이 만든 버튼에 그 id를 붙이지 않고, 클릭을 위로 올려 보내지 않는다.**
+- 희망수업에서 이미 신청한 과목 행에는 [신청]이 없다. 모양·흐름 정리는 [real-screen.md](real-screen.md).
 - 희망수업 표에는 `display:none`인 "추가" 버튼이 숨어 있다. 보이는 버튼만 다룬다 (`SG.buttons()`가 걸러 줌).
 - 수강신청 표에는 머리글이 없는 숨김 칸(`td.hidden-type`)이 행마다 3개 끼어 있다. 칸 위치는 `SG.cell(행, '열 이름')`으로만 찾는다 (숨김 칸을 빼고 셈).
 - 머리글 글자는 공백이 섞여 있다 (예: "수강/ 정원", "이수제한 여부"). 비교할 때 공백은 무시된다.
