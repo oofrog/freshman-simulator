@@ -1,7 +1,7 @@
 // 실전 재현 모드 (#8·#9, 담당: 박태현)
 // 희망수업의 [신청]을 가짜 버튼으로 바꾸고(이미 신청해서 버튼이 없는 행에도 넣음), 카운트다운 뒤 신청이 열린다.
 // 실제 화면처럼 남은 자리는 보여 주지 않고, 마감 여부는 [신청]을 눌렀을 때 메시지로만 알려 준다.
-// 시작 배너가 사라진 자리의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 플랜 B 전환 시간)을 띄운다.
+// 시작 배너 옆의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 플랜 B 전환 시간)을 띄운다.
 // 마감 시각·신청 판정·결과 요약 계산은 화면과 분리된 engine.js (SG.engine)
 // 메시지는 실제 화면의 "시스템 메시지"와 같은 모양으로 띄운다. 실제 화면 정리·아직 필요한 데이터: docs/real-screen.md
 (() => {
@@ -24,7 +24,7 @@
     .sg-sys .ui-widget-overlay{position:absolute;inset:0}
     .sg-sys .ui-dialog{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px}
     .sg-sys .ui-dialog-content{min-height:55px}
-    .sg-count .sg-btn{background:#fff;color:#111827;font-weight:bold}
+    .sg-count .sg-btn{margin-left:12px;background:#fff;color:#111827;font-weight:bold}
     .sg-result[data-sg]{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-result .sg-box{background:#fff;border-radius:10px;padding:18px 20px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 8px 24px #0005}
     .sg-result p{margin:4px 0 8px}
@@ -149,8 +149,7 @@
       const t = elapsed(me);
       if (t >= 0) {
         banner.textContent = '수강신청 시작!';
-        const end = SG.el('button', { className: 'sg-btn', textContent: '연습 끝내기', onclick: () => finish(me) });
-        me.timer = setTimeout(() => banner.replaceChildren(end), 2000);
+        banner.append(SG.el('button', { className: 'sg-btn', textContent: '연습 끝내기', onclick: () => finish(me) }));
         return;
       }
       banner.textContent = `수강신청 시작까지 ${Math.ceil(-t)}초`;
@@ -164,7 +163,7 @@
     async start() {
       if (SG.screen() !== '희망수업') {
         SG.goMenu('희망수업');
-        await SG.waitFor(() => SG.screen() === '희망수업' && SG.rows().length);
+        await SG.waitFor(() => SG.screen() === '희망수업' && SG.grid());
       }
       const me = s = { rows: [], clicks: [], extras: [], dialog: null, timer: 0, openAt: 0, done: false };
       const trs = SG.rows();
@@ -224,5 +223,6 @@
       s.dialog?.remove();
       s = null;
     },
+    escape() { s?.dialog?.remove(); }, // Esc는 시스템 메시지만 닫고 연습은 계속
   });
 })();

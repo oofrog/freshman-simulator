@@ -44,10 +44,11 @@ SG.register('tutorial', {
   stop() { ... },           // Esc·다른 모드·끄기 때 (화면에 바꾼 것 되돌리기)
   allow(el) { ... },        // (선택) true를 돌려준 요소는 클릭 허용. 없으면 페이지 클릭은 전부 막힘
   blocked(el) { ... },      // (선택) 막힌 클릭이 일어났을 때
+  escape() { ... },         // (선택) Esc를 눌렀을 때. 있으면 모드가 끝나지 않고 이것만 불림
 });
 ```
 - 확장이 켜져 있는 동안 페이지 클릭은 기본적으로 **전부 막힌다**. 모드가 꺼진 대기 상태에서는 메뉴 이동·조회·입력칸만 허용된다.
-- 확장이 만든 요소(`SG.el(...)`로 만든 것)는 막히지 않는다.
+- 확장이 만든 요소(`SG.el(...)`로 만든 것)는 막히지 않는다. 그 안에서 일어난 클릭 등은 페이지(학교 코드)로 올라가지 않는다.
 
 ## core가 주는 함수 (`SG.`)
 | 함수 | 용도 |
@@ -58,4 +59,4 @@ SG.register('tutorial', {
 | `goMenu('희망수업')`, `waitFor(조건함수)` | 화면 이동과 대기 |
 | `matchTip(el)`, `tipEl(tip)` | 요소 → 팁, 팁 → 요소 |
 | `highlight(el)`, `bubble(el, {title, text, buttons})`, `modal({title, text, buttons})`, `clear()` | 오버레이. `bubble`·`modal`은 누른 버튼 글자를 Promise로 돌려줌 |
-| `el(tag, props, ...children)` | 확장용 요소 만들기 (클릭 차단에서 빠짐) |
+| `el(tag, props, ...children)` | 확장용 요소 만들기 (클릭 차단에서 빠지고, 이벤트를 페이지로 올려 보내지 않음) |
