@@ -3,6 +3,7 @@
 실제 수강신청 화면 위에 튜토리얼·실전 재현·팁을 덧씌우는 크롬 확장. **실제 신청은 되지 않는다.**
 
 ## 원칙 (모든 파일 공통)
+외부 요청 금지와 `chrome.*` 사용 위치는 PR마다 자동 검사(`node scripts/check.js`)가 확인한다.
 - 외부 서버 연결 금지: `fetch`, `XMLHttpRequest`, `WebSocket`, `sendBeacon`을 쓰지 않는다 (LLM 포함).
 - 페이지 글자는 `textContent`로만 넣는다. `innerHTML`에 페이지 데이터를 넣지 않는다.
 - 학교의 제한(새로고침 차단, 대기열, 매크로 방지)을 건드리지 않는다.
