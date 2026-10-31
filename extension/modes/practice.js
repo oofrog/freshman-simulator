@@ -107,7 +107,6 @@
       const t = elapsed(me);
       if (t >= 0) {
         banner.textContent = '수강신청 시작!';
-        me.timer = setTimeout(() => banner.remove(), 2000);
         return;
       }
       banner.textContent = `수강신청 시작까지 ${Math.ceil(-t)}초`;
@@ -121,7 +120,7 @@
     async start() {
       if (SG.screen() !== '희망수업') {
         SG.goMenu('희망수업');
-        await SG.waitFor(() => SG.screen() === '희망수업' && SG.rows().length);
+        await SG.waitFor(() => SG.screen() === '희망수업' && SG.grid());
       }
       const me = s = { rows: [], extras: [], dialog: null, timer: 0, openAt: 0 };
       const trs = SG.rows();
@@ -178,5 +177,6 @@
       s.dialog?.remove();
       s = null;
     },
+    escape() { s?.dialog?.remove(); }, // Esc는 시스템 메시지만 닫고 연습은 계속
   });
 })();

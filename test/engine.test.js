@@ -21,6 +21,7 @@ const ALL = [...MOCK, ...EDGE, ...GRID];
 const TIMES = [-5, 0, 0.1, 0.5, 1, 2, 3, 5, 8, 13, 21, 60, 600];
 // MODEL 값(지금은 임시)을 실제 자료로 고쳐도 판정이 유지되는지. 첫 줄이 기본값
 const MODELS = [
+  { ...MODEL }, // 지금 engine.js의 기본값 (engine을 고치면 자동으로 따라감)
   { show: 0.8, burst: 0.7, fast: 0.3, slow: 20 },
   { show: 1, burst: 1, fast: 5, slow: 5 },     // 한꺼번에 몰리기만 함
   { show: 0.7, burst: 0, fast: 0.3, slow: 60 }, // 천천히만 들어옴
