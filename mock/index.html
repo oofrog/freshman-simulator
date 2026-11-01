@@ -107,6 +107,7 @@ const col = {
   check: ['<input type="checkbox" id="chooseAll">', () => '<input type="checkbox" name="editBox">'],
   order: ['정렬순서', () => `<select class="orderSeq"><option value="">선택</option>${hope.map((_, j) => `<option>${j + 1}</option>`).join('')}</select>`],
   apply: ['수강신청', c => btn('신청', 'apply', c, 'blue')],
+  hopeApply: ['수강신청', c => done.includes(c.no) ? '' : btn('신청', 'apply', c, 'blue')], // 실제 희망수업은 이미 신청한 과목에 [신청]이 없다
   hopeAdd: ['희망신청', c => btn('추가', 'hopeAdd', c)],
   hopeDel: ['희망수업 삭제', c => btn('희망삭제', 'hopeDel', c)],
   cancel: ['수강취소', c => btn('수강취소', 'cancel', c)],
@@ -152,7 +153,7 @@ const PAGES = [
       <input type="text" id="edHakjeom" size="2" readonly value="${hope.reduce((s, n) => s + byNo[n].credit, 0)}"> 학점</div>
     <p class="notice">◎ 희망수업추가 이후에 시간표, 이수제한이 변경될 수도 있으므로, 반드시 수강신청 전에 최종확인을 하시기 바랍니다.</p>
     <div class="toolbar"><input type="button" id="btn_save" value="정렬순서저장" data-act="orderSave"></div>`
-    + grid(['check', 'order', 'apply', 'enrolled', 'cap', 'hope', 'type', 'area', 'no', 'code', 'name', 'hopeDel', 'retake', 'prof', 'credit', 'time', 'room', 'limit', 'dept'], hope.map(n => byNo[n]))],
+    + grid(['check', 'order', 'hopeApply', 'enrolled', 'cap', 'hope', 'type', 'area', 'no', 'code', 'name', 'hopeDel', 'retake', 'prof', 'credit', 'time', 'room', 'limit', 'dept'], hope.map(n => byNo[n]))],
   ['done', '신청내역', () => `<div class="toolbar"><input type="button" value="신청과목시간표확인" data-act="todo"></div>`
     + grid(['cancel', 'type', 'area', 'no', 'code', 'name', 'prof', 'credit', 'lec', 'lab', 'seat', 'time', 'room', 'dept'], done.map(n => byNo[n]))],
 ];

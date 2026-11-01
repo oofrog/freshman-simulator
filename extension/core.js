@@ -63,9 +63,14 @@ window.SG = (() => {
   };
 
   // ---------- 오버레이 ----------
+  // 클릭 차단(guard)이 보는 이벤트. 확장 요소에서 일어난 이 이벤트는 페이지 쪽으로 올려 보내지 않는다
+  const EVENTS = ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'keydown'];
+  const stopUp = e => e.stopPropagation();
+  // 확장용 요소: data-sg가 붙어 클릭 차단에서 빠지고, 안에서 일어난 이벤트는 여기서 멈춰 학교 코드(tbody·document 위임)에 닿지 않는다
   const el = (tag, props = {}, ...kids) => {
     const e = Object.assign(document.createElement(tag), props);
     e.dataset.sg = '';
+    EVENTS.forEach(t => e.addEventListener(t, stopUp));
     e.append(...kids);
     return e;
   };
@@ -114,14 +119,12 @@ window.SG = (() => {
   const SAFE = ['조회', '초기화', '▼상세조회'];
   const idleAllow = e => !!e.closest('#snb a[title]') || e.matches('input[type=text], select, option') ||
     (e.matches('input[type=button], button') && SAFE.includes(norm(label(e))));
-  const EVENTS = ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit', 'keydown'];
   const guard = e => {
-    if (bypass || e.target.closest?.('[data-sg]')) return;
-    if (e.type === 'keydown') {
-      if (e.key === 'Escape') return stop();
-      if (e.key !== 'Enter') return; // 글자 입력은 허용, Enter 제출만 막음
-    }
     const m = modes[current];
+    // Esc: 모드가 escape()를 정의하면 그것만 부르고(예: 실전 재현은 메시지만 닫음), 없으면 모드 종료. 포커스가 확장 요소 안이어도 같다
+    if (e.type === 'keydown' && e.key === 'Escape') return m?.escape ? m.escape() : stop();
+    if (bypass || e.target.closest?.('[data-sg]')) return;
+    if (e.type === 'keydown' && e.key !== 'Enter') return; // 글자 입력은 허용, Enter 제출만 막음
     if (m ? m.allow?.(e.target, e) : idleAllow(e.target)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -129,7 +132,7 @@ window.SG = (() => {
   };
 
   // ---------- 모드 · 패널 ----------
-  // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)? })
+  // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()? })
   const register = (name, mode) => { modes[name] = mode; ui && renderPanel(); };
   const start = async name => {
     stop();
