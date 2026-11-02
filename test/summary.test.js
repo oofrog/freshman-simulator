@@ -51,23 +51,6 @@ test('요약에 모든 과목의 결과가 나온다', () => {
   for (const k of clicks.filter(k => k.t >= 0)) assert.equal(sum[k.course].result, judge(COURSES[k.course].hope, COURSES[k.course].cap, k.t));
 });
 
-test('플랜 B 전환 시간: 정원 초과가 뜬 순간부터 다른 과목을 누를 때까지', () => {
-  const failAt = close(COURSES[movie]) + 0.2;
-  const clicks = [
-    { course: movie, t: failAt },        // 정원 초과
-    { course: movie, t: failAt + 0.4 },  // 같은 과목 다시 누름 → 전환 아님
-    { course: econ, t: failAt + 1.3 },   // 다른 과목 → 여기까지가 전환 시간
-    { course: art, t: failAt + 2 },      // 정원 초과, 그 뒤로 아무것도 안 누름
-  ];
-  const sum = summarize(COURSES, clicks);
-  assert.equal(sum[movie].result, 'full');
-  assert.equal(sum[movie].at, failAt, '처음 누른 시각');
-  assert.ok(Math.abs(sum[movie].planB - 1.3) < 1e-9, `전환 ${sum[movie].planB}초`);
-  assert.equal(sum[art].result, 'full');
-  assert.equal(sum[art].planB, null, '다른 과목으로 안 바꿨으면 null');
-  assert.equal(sum[econ].planB, null, '성공한 과목은 전환 시간이 없다');
-});
-
 test('같은 입력이면 같은 요약이 나온다', () => {
   const clicks = COURSES.map((c, i) => ({ course: i, t: 0.05 * (i + 1) }));
   assert.deepEqual(summarize(COURSES, clicks), summarize(COURSES, clicks));

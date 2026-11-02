@@ -1,7 +1,7 @@
 // 실전 재현 모드 (#8·#9, 담당: 박태현)
 // 희망수업의 [신청]을 가짜 버튼으로 바꾸고(이미 신청해서 버튼이 없는 행에도 넣음), 카운트다운 뒤 신청이 열린다.
 // 실제 화면처럼 남은 자리는 보여 주지 않고, 마감 여부는 [신청]을 눌렀을 때 메시지로만 알려 준다.
-// 시작 배너 옆의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 플랜 B 전환 시간)을 띄운다.
+// 시작 배너 옆의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 누른 시각과 마감 시각)을 띄운다.
 // 마감 시각·신청 판정·결과 요약 계산은 화면과 분리된 engine.js (SG.engine)
 // 메시지는 실제 화면의 "시스템 메시지"와 같은 모양으로 띄운다. 실제 화면 정리·아직 필요한 데이터: docs/real-screen.md
 (() => {
@@ -110,21 +110,21 @@
     return sysMessage(MSG[result]);
   };
 
-  // 결과 요약: 과목마다 결과·누른 시각·마감·차이·플랜 B 전환 시간. [다시 하기]는 처음부터, [닫기]는 연습을 끝내고 화면을 되돌린다
+  // 결과 요약: 과목마다 결과·누른 시각·마감·차이. [다시 하기]는 처음부터, [닫기]는 연습을 끝내고 화면을 되돌린다
+  // [연습 끝내기]에 포커스가 남아 Enter·Space로 다시 눌릴 수 있으므로 한 번만 띄운다
   const RESULT = { done: '성공', full: '정원 초과', none: '안 누름' };
   const sec = x => `${x.toFixed(2)}초`;
   const finish = me => {
+    if (me.done) return;
     me.done = true;
-    clearTimeout(me.timer);
     me.dialog?.remove();
     const sum = summarize(me.rows, me.clicks);
     const count = k => sum.filter(r => r.result === k).length;
     const td = (text, className = '') => h('td', className, text);
     const lines = sum.map((r, i) => {
       const gap = r.at === null || r.close === Infinity ? '—' : r.close > r.at ? `${sec(r.close - r.at)} 여유` : `${sec(r.at - r.close)} 늦음`;
-      const planB = r.result !== 'full' ? '—' : r.planB === null ? '안 바꿈' : sec(r.planB);
       return h('tr', '', td(me.rows[i].label), td(RESULT[r.result], r.result), td(r.at === null ? '—' : sec(r.at)),
-        td(r.close === Infinity ? '안 참' : sec(r.close)), td(gap), td(planB));
+        td(r.close === Infinity ? '안 참' : sec(r.close)), td(gap));
     });
     const button = (text, onclick) => SG.el('button', { className: 'sg-btn', textContent: text, onclick });
     const box = SG.el('div', { className: 'sg-result' },
@@ -132,7 +132,7 @@
         h('b', '', '연습 결과'),
         h('p', '', `성공 ${count('done')}과목 · 정원 초과 ${count('full')}과목 · 안 누름 ${count('none')}과목`),
         h('table', '',
-          h('thead', '', h('tr', '', ...['과목', '결과', '누른 시각 (시작 후)', '마감', '차이', '플랜 B 전환'].map(t => h('th', '', t)))),
+          h('thead', '', h('tr', '', ...['과목', '결과', '누른 시각 (시작 후)', '마감', '차이'].map(t => h('th', '', t)))),
           h('tbody', '', ...lines)),
         h('div', 'sg-row', button('다시 하기', () => SG.start('practice')), button('닫기', () => SG.stop()))));
     document.body.append(box);
@@ -179,8 +179,7 @@
         const row = {
           name,
           label: no ? `${name} (${no})` : name, // 결과 요약에서 같은 이름 과목(분반)을 구분
-          hope, cap,
-          closeSec: closeSec(hope, cap),
+          hope, cap, // 마감 시각은 저장하지 않고 필요할 때 SG.engine으로 계산한다 (판정·요약과 값이 어긋나지 않게)
         };
         row.fake = fakeButton(look, () => apply(row));
         if (real) {
@@ -198,7 +197,10 @@
         me.rows.push(row);
       }
       if (!me.rows.length) throw new Error('희망수업에 신청할 과목이 없어요. 과목을 먼저 담아 주세요.');
-      console.table(me.rows.map(r => ({ 과목: r.name, 희망: r.hope, 제한: r.cap, '마감(초)': r.closeSec === Infinity ? '마감 안 됨' : +r.closeSec.toFixed(1) })));
+      console.table(me.rows.map(r => {
+        const close = closeSec(r.hope, r.cap);
+        return { 과목: r.name, 희망: r.hope, 제한: r.cap, '마감(초)': close === Infinity ? '마감 안 됨' : +close.toFixed(1) };
+      }));
 
       const style = SG.el('style', { textContent: CSS + (hasTheme() ? '' : FALLBACK) });
       document.head.append(style);
@@ -223,6 +225,7 @@
       s.dialog?.remove();
       s = null;
     },
-    escape() { s?.dialog?.remove(); }, // Esc는 시스템 메시지만 닫고 연습은 계속
+    // Esc는 시스템 메시지만 닫고 연습은 계속. 결과창이 떠 있으면 [닫기]와 같다
+    escape() { if (s?.done) return SG.stop(); s?.dialog?.remove(); },
   });
 })();

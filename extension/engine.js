@@ -34,7 +34,7 @@
   };
 
   // 시작 후 t초의 남은 자리 (t ≤ 0은 시작 전). closeSec 전에는 1 이상, closeSec부터 0이 되도록 맞춘다
-  // 실제 화면은 남은 자리를 보여 주지 않으므로 연습 중 화면에는 띄우지 않는다. 연습이 끝난 뒤 결과 요약(#9)에서만 쓴다
+  // 실제 화면은 남은 자리를 보여 주지 않으므로 화면(연습 중·결과 요약)에서는 쓰지 않는다. 지금은 판정 스크립트(test/engine.test.js)에서만 쓴다
   const seatsLeft = (hope, cap, t) => {
     if (cap <= 0 || t >= closeSec(hope, cap)) return 0;
     if (t <= 0) return cap;
@@ -46,16 +46,13 @@
   const judge = (hope, cap, t) => t < 0 ? 'notOpen' : t >= closeSec(hope, cap) ? 'full' : 'done';
 
   // 연습 결과 요약. courses: [{ hope, cap }], clicks: [{ course: courses의 번호, t: 시작 후 초 }] (누른 순서대로)
-  // 과목마다 { result: 'done'·'full'·'none'(안 누름), at: 처음 누른 시각, close: 마감 시각, planB } 를 courses 순서대로 돌려준다.
+  // 과목마다 { result: 'done'·'full'·'none'(안 누름), at: 처음 누른 시각, close: 마감 시각 } 를 courses 순서대로 돌려준다.
   // 시작 전 클릭은 결과에 넣지 않는다. 마감 전에 누르면 성공하고 [신청]이 사라지므로 처음 누른 클릭이 결과를 정한다.
-  // planB: 정원 초과가 뜬 순간(처음 누른 시각)부터 다른 과목의 [신청]을 누를 때까지(초). 같은 과목을 다시 누른 건 치지 않는다. 안 바꿨으면 null
   const summarize = (courses, clicks) => courses.map(({ hope, cap }, i) => {
     const close = closeSec(hope, cap);
     const first = clicks.find(k => k.course === i && k.t >= 0);
-    if (!first) return { result: 'none', at: null, close, planB: null };
-    const result = judge(hope, cap, first.t);
-    const next = result === 'full' ? clicks.slice(clicks.indexOf(first) + 1).find(k => k.course !== i) : null;
-    return { result, at: first.t, close, planB: next ? next.t - first.t : null };
+    if (!first) return { result: 'none', at: null, close };
+    return { result: judge(hope, cap, first.t), at: first.t, close };
   });
 
   const engine = { MODEL, closeSec, seatsLeft, judge, summarize };
