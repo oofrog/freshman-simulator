@@ -97,6 +97,36 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .course-dialog { width: min(710px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; border: 0; color: inherit; background: white; box-shadow: 0 4px 24px #0006; }
 .course-dialog[data-kind=timetable] { width: min(812px, calc(100vw - 24px)); }
 .course-dialog[data-kind=weekly] { width: min(880px, calc(100vw - 24px)); }
+.course-dialog:is([data-kind=capacity], [data-kind=department]) { width: min(700px, calc(100vw - 24px)); }
+.course-dialog[data-kind=capacity] { min-height: min(284px, calc(100dvh - 24px)); }
+.course-dialog[data-kind=department] { min-height: min(584px, calc(100dvh - 24px)); }
+.course-dialog[data-kind=department] .course-dialog-footer { display: none; }
+.department-course-name { margin: 0 0 5px; }
+.course-dialog[data-kind=overview] { width: min(900px, calc(100vw - 24px)); min-height: min(684px, calc(100dvh - 24px)); }
+.course-dialog[data-kind=syllabus] { width: min(1040px, calc(100vw - 24px)); }
+.document-tools { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.overview-tools { position: relative; justify-content: center; min-height: 25px; }
+.overview-tools .doc-tool { position: absolute; right: 5px; }
+.doc-tool { background: #777; color: white; border: 0; border-radius: 2px; padding: 3px 9px; cursor: pointer; }
+.doc-lang { min-width: 116px; padding: 8px; font-weight: bold; border: 1px solid #ccc; background: linear-gradient(white, #f4f4f4); cursor: pointer; }
+.doc-lang.is-active { background: #406eaa; color: white; border-color: #406eaa; }
+.overview-metadata { display: grid; grid-template-columns: 77fr 23fr; margin-bottom: 5px; }
+.overview-metadata table:first-child th { width: 23%; }
+.overview-metadata table:last-child th { width: 36%; }
+.document-table th { width: 18%; }
+.document-table td { text-align: left; }
+.overview-books { min-height: 130px; border: 1px solid var(--line); margin-top: 16px; }
+.overview-books table { margin: -1px 0 0 -1px; }
+.syllabus-meta { display: grid; grid-template-columns: 58fr 42fr; }
+#course-dialog[data-kind=syllabus] h3 { margin: 14px 0 4px; font-size: 13px; }
+.document-empty { border: 1px solid var(--line); padding: 5px; text-align: center; margin-bottom: 16px; }
+.document-table textarea { display: block; width: 100%; min-height: 40px; resize: vertical; border: 1px solid #d7d7d7; background: #f7f7f7; }
+.doc-field { display: block; min-height: 23px; background: #eeeee8; border: 1px solid #d7d7d7; }
+@media print {
+  body:has(#course-dialog[open]) > :not(#course-dialog) { display: none !important; }
+  #course-dialog[open] { position: static; width: 100%; max-width: none; max-height: none; min-height: 0; overflow: visible; box-shadow: none; }
+  #course-dialog::backdrop, #course-dialog .course-dialog-cross, #course-dialog .course-dialog-footer, #course-dialog .document-tools button { display: none; }
+}
 .course-dialog::backdrop { background: rgb(0 0 0 / 33%); }
 .course-dialog-header { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; height: 62px; padding: 0 18px 0 20px; border-bottom: 4px solid #63bbdf; background: linear-gradient(#4a79b7, #38639d); color: white; }
 .course-dialog-header h2 { margin: 0; font-size: 16px; }

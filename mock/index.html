@@ -104,7 +104,7 @@ const col = {
   code: ['학수번호', c => courseNumber(c, 'code', 'overview', '교과목 개요서 조회')],
   name: ['교과목명', c => c.name],
   prof: ['교강사', c => c.prof], credit: ['학점', c => c.credit], lec: ['강의', c => c.lec], lab: ['실습', c => c.lab],
-  seat: ['수강/<br>정원', c => `${c.enrolled}/${c.cap}`],
+  seat: ['수강/<br>정원', c => courseTextLink(c, `${c.enrolled}/${c.cap}`, 'courseCapacity')],
   enrolled: ['신청인원', c => c.enrolled], cap: ['제한인원', c => c.cap], hope: ['희망인원', c => c.hope],
   retake: ['재수강<br>여부', () => 'N'],
   applied: ['신청<br>구분', c => done.includes(c.no) ? 'Y' : 'N'],
@@ -301,18 +301,60 @@ function showCourseDetail(c) {
     + `<tr><th scope="row">특수강좌</th><td colspan="4" class="course-detail-text">${escapeAttr(c.teuksu || '')}</td></tr><tr><th scope="row">설명</th><td colspan="4" class="course-detail-text"></td></tr>`;
   openCourseDialog('detail', '과목 상세 정보', dialogTable(['강좌유형','성적부여형태','공학인증과목','교직과목','비고'], [15,42,15,15,13], rows));
 }
-function showCourseDocument(c, syllabus) {
-  const fields = syllabus
-    ? [['수업번호', c.no], ['교과목명', c.name], ['교강사', c.prof], ['수업시간', c.time], ['강의실', c.room]]
-    : [['학수번호', c.code], ['교과목명', c.name], ['이수구분', c.type], ['학점', c.credit], ['설강학과', c.dept]];
-  openCourseDialog('detail', syllabus ? '강의계획서 조회' : '교과목 개요서 조회',
-    dialogTable(['항목', '내용'], [25,75], fields.map(dialogCells).join(''))
-    + '<p class="grid-hint course-dialog-note">목업의 과목 정보입니다. 실제 문서는 연결되어 있지 않습니다.</p>');
+const docEmpty = '조회를 하지 않았거나 조회된 데이터가 없습니다.';
+const docPrint = '<button type="button" class="doc-tool" data-doc-print>출력</button>';
+const docRows = pairs => pairs.map(([label, value]) => `<tr><th scope="row">${label}</th><td>${escapeAttr(value ?? '')}</td></tr>`).join('');
+const docTable = rows => `<table class="course-dialog-table document-table"><tbody>${docRows(rows)}</tbody></table>`;
+const emptyDocTable = (heads, widths) => dialogTable(heads, widths, `<tr><td colspan="${heads.length}">${docEmpty}</td></tr>`);
+function showCourseOverview(c) {
+  openCourseDialog('overview', '교과목 개요서', `<div class="document-tools overview-tools"><span>교과목 개요서</span>${docPrint}</div>
+    <div class="overview-metadata">
+      ${docTable([['국문', c.name], ['영문', c.nameEn], ['관장학과', c.manager || c.dept], ['대학', c.college]])}
+      ${docTable([['과목구분', c.type], ['대상학년', c.year], ['대상학기', c.targetTerm], ['학점', c.credit], ['강의', c.lec], ['실습', c.lab]])}
+    </div>
+    ${docTable([['국문개요', c.description], ['영문개요', c.descriptionEn], ['수업목표', c.objective]])}
+    <div class="overview-books">${emptyDocTable(['도서ID','도서명','저자명','출판사','ISBN'], [10,55,10,15,10])}</div>`);
+}
+function showCourseSyllabus(c) {
+  const narrative = ['교과목개요','수업목표 및 안내','지난학기 강의평가 반영사항','세부 수업목표1','세부 수업목표2','세부 수업목표3','교과목 주요주제','선수과목안내','수강생 유의사항','장애학생 수업안내'];
+  const books = ['순번','교재명','저자','출판사','ISBN','가격','삭제'];
+  const plan = `<div class="document-tools"><button type="button" class="doc-lang is-active" data-doc-lang="국문" aria-pressed="true">국문</button><button type="button" class="doc-lang" data-doc-lang="영문" aria-pressed="false">영문</button>${docPrint}</div>
+    <h3>첨부파일</h3><div class="document-empty">${docEmpty}</div>
+    ${docTable([['강의소개영상', '']])}
+    <h3 id="syllabus-language-title">강의계획서(국문)</h3>
+    <div class="syllabus-meta">
+      ${docTable([['교과목명 (국문)', c.name], ['교과목명 (영문)', c.nameEn], ['학수번호', c.code], ['수업코드', c.no], ['강의시간', c.time]])}
+      ${docTable([['과목구분', c.type], ['설강조직', c.dept], ['학점', c.credit], ['강의', c.lec], ['실습', c.lab]])}
+    </div>
+    <h3>교강사정보</h3>${docTable([['소속', ''], ['성명', c.prof], ['연락처', ''], ['E-MAIL', ''], ['홈페이지', '']])}
+    <h3>수업운영</h3>${docTable([['수업형태', c.mode], ['수업진행형태', ''], ['강의평가유형', ''], ['지속가능 발전목표 SDGs', '']])}
+    <table class="course-dialog-table document-table"><tbody>${narrative.map(label => `<tr><th scope="row">${label}</th><td><textarea readonly aria-label="${label}"></textarea></td></tr>`).join('')}</tbody></table>
+    <h3>교재</h3>${emptyDocTable(books, [6,46,12,12,12,6,6])}
+    <h3>부교재</h3>${emptyDocTable(books, [6,46,12,12,12,6,6])}
+    <h3>평가항목</h3>${dialogTable(['평가항목','비율','평가항목','비율'], [37,13,37,13], [['출석','','퀴즈',''],['과제','','중간고사',''],['토론','','기말고사','']].map(dialogCells).join(''))}
+    <h3>주별 강의계획 및 과제</h3>${dialogTable(['주(회)차','주제','활동사항','수업형태'], [10,35,35,20], Array.from({length:16}, (_, i) => `<tr><td>${i+1}주(회)차</td><td><span class="doc-field"></span></td><td><span class="doc-field"></span></td><td>선택</td></tr>`).join(''))}`;
+  openCourseDialog('syllabus', '수업계획서', plan);
 }
 const courseViews = { limit: showCourseLimit, timetable: showCourseTime, courseDetail: showCourseDetail,
-  courseDepartment: c => openCourseDialog('detail', '설강학과',
-    dialogTable(['교과목명', '설강학과'], [50,50], dialogCells([c.name, c.dept]))),
-  syllabus: c => showCourseDocument(c, true), overview: c => showCourseDocument(c, false) };
+  courseDepartment: c => openCourseDialog('department', '타과전공 개설수업목록',
+    `<p class="department-course-name">${escapeAttr(c.name)}</p>`
+    + emptyDocTable(['년도','학기','설강학과','학년','이수구분'], [14,14,29,14,29])),
+  courseCapacity: c => openCourseDialog('capacity', '신청/정원 인원',
+    dialogTable(['총정원+증원인원','1학년','2학년','3학년','4,5학년','대학원','다전공','교환학생','증원인원'],
+      [24,8,8,8,10,9,9,10,14], dialogCells([c.cap, ...(c.capacityBreakdown || Array(8).fill(''))]))),
+  syllabus: showCourseSyllabus, overview: showCourseOverview };
+courseDialog.addEventListener('click', e => {
+  const tab = e.target.closest('[data-doc-lang]');
+  if (tab) {
+    courseDialog.querySelectorAll('[data-doc-lang]').forEach(button => {
+      const active = button === tab;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    document.getElementById('syllabus-language-title').textContent = `강의계획서(${tab.dataset.docLang})`;
+  }
+  if (e.target.closest('[data-doc-print]')) window.print();
+});
 
 const ACT = {
   apply: c => apply(c),
