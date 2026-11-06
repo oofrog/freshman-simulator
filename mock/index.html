@@ -12,7 +12,7 @@
 </head>
 <body>
 <div id="logo-area">
-  <div class="left-area"><img src="hy_main_logo_ko.png" alt="한양대학교"><h2>2026년 겨울학기 수강신청</h2>
+  <div class="left-area"><img src="hy_main_logo_ko.png" alt="한양대학교"><h2>2026년 2학기 수강신청</h2>
     <div class="quick-area">
       <label for="edQuickSuupNo">수업번호</label>
       <input type="text" id="edQuickSuupNo" size="7">
@@ -85,6 +85,9 @@ const sum = type => done.map(n => byNo[n]).filter(c => !type || c.type.startsWit
 
 // ---------- 표 열 정의 ----------
 const btn = (v, act, c, cls = '') => `<input type="button" class="${cls}" value="${v}" data-act="${act}" data-no="${c.no}">`;
+const magnifier = (c, action, label) => `<button type="button" class="course-detail-button" aria-label="${label}" data-act="${action}" data-no="${escapeAttr(c.no)}"><svg aria-hidden="true" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="3.5"/><path d="m9 9 4 4"/></svg></button>`;
+const courseTextLink = (c, value, action) => value ? `<a href="#" class="course-text-link" data-act="${action}" data-no="${escapeAttr(c.no)}">${escapeAttr(value)}</a>` : '';
+const courseNumber = (c, key, action, label) => c[key] ? `<span class="course-number">${courseTextLink(c, c[key], action)}${magnifier(c, action, label)}</span>` : '';
 const col = {
   check: [() => `<input type="checkbox" id="chooseAll" aria-label="희망수업 전체 선택"${hope.length && hope.every(n => selectedHope.has(n)) ? ' checked' : ''}>`, c => `<input type="checkbox" name="editBox" value="${c.no}" aria-label="${escapeAttr(c.name)} 선택"${selectedHope.has(c.no) ? ' checked' : ''}>`],
   order: ['정렬순서', (c, i) => `<select class="orderSeq" aria-label="${escapeAttr(c.name)} 정렬순서">${hope.map((_, j) => `<option${i === j ? ' selected' : ''}>${j + 1}</option>`).join('')}</select>`],
@@ -96,8 +99,10 @@ const col = {
   hopeDel: ['희망수업 삭제', c => btn('희망삭제', 'hopeDel', c)],
   cancel: ['수강취소', c => btn('수강취소', 'cancel', c)],
   year: ['학년', c => c.year], cls: ['반', c => c.cls],
-  type: ['이수구분', c => c.type], area: ['영역', c => c.area],
-  no: ['수업번호', c => c.no], code: ['학수번호', c => c.code], name: ['교과목명', c => c.name],
+  type: ['이수구분', c => c.type], area: ['영역', c => `<span class="course-area">${escapeAttr(c.area || '영역없음')}</span>`],
+  no: ['수업번호', c => courseNumber(c, 'no', 'syllabus', '강의계획서 조회')],
+  code: ['학수번호', c => courseNumber(c, 'code', 'overview', '교과목 개요서 조회')],
+  name: ['교과목명', c => c.name],
   prof: ['교강사', c => c.prof], credit: ['학점', c => c.credit], lec: ['강의', c => c.lec], lab: ['실습', c => c.lab],
   seat: ['수강/<br>정원', c => `${c.enrolled}/${c.cap}`],
   enrolled: ['신청인원', c => c.enrolled], cap: ['제한인원', c => c.cap], hope: ['희망인원', c => c.hope],
@@ -105,14 +110,14 @@ const col = {
   applied: ['신청<br>구분', c => done.includes(c.no) ? 'Y' : 'N'],
   retakeCode: ['재수강 학수번호', () => ''],
   retakeName: ['재수강 교과목명', () => ''],
-  time: ['수업시간', c => c.time ? `<button type="button" class="course-link course-time" data-act="timetable" data-no="${c.no}">${escapeAttr(c.time).replace(/\) /g, ')<br>')}</button>` : ''], room: ['강의실', c => c.room],
+  time: ['수업시간', c => c.time ? `<button type="button" class="course-link course-time" data-act="timetable" data-no="${c.no}">${c.time.split(/(?<=\))\s+/).map(line => `<span class="course-time-line">${escapeAttr(line)}</span>`).join('<br>')}</button>` : ''], room: ['강의실', c => c.room],
   limit: ['이수제한<br>여부', c => c.limit ? `<a href="#" data-act="limit" data-no="${c.no}">O</a>` : ''],
-  dept: ['설강학과', c => c.dept],
+  dept: ['설강학과', c => courseTextLink(c, c.dept, 'courseDepartment')],
   unit: ['이수단위', () => ''], old: ['(변경전)교과목명', c => c.old || ''],
   preview: ['강좌 미리보기', () => ''], notice: ['과목안내', () => ''],
-  accreditation: ['공학인증<br>구분', () => ''], degree: ['학위과정', () => '학사'],
-  format: ['강좌유형', () => '일반'], mode: ['수업형태', () => ''],
-  detail: ['과목상세 정보', c => `${c.no === '20002' ? 'HY-LIVE ' : ''}<button type="button" class="course-detail-button" aria-label="과목 상세 정보" data-act="courseDetail" data-no="${c.no}"><svg aria-hidden="true" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="3.5"/><path d="m9 9 4 4"/></svg></button>`], competency: ['6C핵심역량', () => ''],
+  accreditation: ['공학인증<br>구분', c => c.abek || ''], degree: ['학위과정', () => '학사'],
+  format: ['강좌유형', c => c.gangjwaType || '일반'], mode: ['수업형태', () => ''],
+  detail: ['과목상세 정보', c => `${courseTextLink(c, c.teuksu, 'courseDetail')} ${magnifier(c, 'courseDetail', '과목 상세 정보')}`], competency: ['6C핵심역량', () => ''],
   manager: ['관장학과', c => c.dept],
 };
 // 'hidden': 실제 수강신청 표처럼 머리글 없는 숨김 칸(td.hidden-type) 3개를 끼워 넣음 → 확장이 칸 위치를 제대로 세는지 확인용
@@ -133,9 +138,10 @@ const grid = (keys, rows, id = 'gdMain') => {
   const visible = keys.filter(k => k !== 'hidden');
   const isBasic = keys === basicCols || keys === basicSubCols;
   const widths = keys === catalogCols ? catalogWidths : keys === applyCols ? applyWidths : keys === hopeCols ? hopeWidths : keys === doneCols ? doneWidths : isBasic ? basicCols.flatMap((k, i) => visible.includes(k) ? [basicWidths[i]] : []) : visible.map(k => otherWidths[k] || 72);
-  const totalWidth = widths.reduce((a, b) => a + b, 0);
+  const columnWidths = widths.map((w, i) => Math.max(w, visible[i] === 'no' ? 68 : visible[i] === 'code' ? 92 : 0));
+  const totalWidth = columnWidths.reduce((a, b) => a + b, 0);
   return `<div class="grid-wrap" tabindex="0" aria-label="과목 목록"><table id="${id}" class="grid${isBasic ? ' basic-grid' : ''}" style="width:${isBasic ? '100%;min-width:' + totalWidth : totalWidth}px">
-  <colgroup>${widths.map(w => `<col style="width:${isBasic ? (w / totalWidth * 100) + '%' : w + 'px'}">`).join('')}</colgroup>
+  <colgroup>${columnWidths.map(w => `<col style="width:${isBasic ? (w / totalWidth * 100) + '%' : w + 'px'}">`).join('')}</colgroup>
   <thead><tr>${visible.map(k => `<th scope="col">${typeof col[k][0] === 'function' ? col[k][0]() : col[k][0]}</th>`).join('')}</tr></thead>
   <tbody>${rows.length ? rows.map((c, i) => `<tr data-no="${c.no}">${keys.map(k => cellHtml(k, c, i)).join('')}</tr>`).join('')
     : `<tr><td class="empty emptyDataList" colspan="${visible.length}"${isBasic ? ' aria-label="등록된 과목 없음"' : ''}>${isBasic ? '' : '조회를 하지 않았거나 조회된 데이터가 없습니다.'}</td></tr>`}</tbody>
@@ -150,7 +156,7 @@ const searchBox = (page, q = query[page] || {}) => `<div class="search-box" data
   <div class="search-row">
     <label class="first-filter">조직 <select id="cbJojikGbCd"><option>대학(학부/ERICA)</option></select></label>
     <label class="year-filter">년도 <input type="number" id="cbYear" name="year" style="width:83px" value="${escapeAttr(q.year ?? 2026)}"></label>
-    <label class="term-filter">학기 <select id="cbTerm" name="term">${opts(['1학기','여름학기','2학기','겨울학기'], q.term || '겨울학기')}</select></label>
+    <label class="term-filter">학기 <select id="cbTerm" name="term">${opts(['1학기','여름학기','2학기','겨울학기'], q.term || '2학기')}</select></label>
     <label class="grade-filter">학년 <select id="cbGrade" name="grade">${opts(['전체','1','2','3','4','5','전학년'], q.grade)}</select></label>
     <span class="special-filters">특수강좌 ${['영어강의','E-러닝','SMART-F·B','PBL','산학협력영역'].map((label, i) => `<label><input type="checkbox" name="special" value="${i}"${q.special?.includes(String(i)) ? ' checked' : ''}> ${label}</label>`).join('')}</span>
     ${page === 'apply' ? `<div class="course-groups" role="group" aria-label="과목구분">${courseGroups.map(label => `<label><input type="radio" name="gubun" value="${escapeAttr(label)}"${label === (q.gubun || '전체') ? ' checked' : ''}> ${label}</label>`).join('')}</div>` : ''}
@@ -242,16 +248,12 @@ function openCourseDialog(kind, title, body) {
   courseDialog.showModal();
 }
 function showCourseLimit(c) {
-  const rule = {
-    '10101': [['ERICA 대학 (그 외 소속)', [1,2,3,4,5]], ['소프트웨어학부', [2,3,4,5]]],
-    '10102': [['ERICA 대학 (그 외 소속)', [1,2,3,4,5]], ['소프트웨어학부', [2,3,4,5]]],
-    '20001': [['ERICA 대학', [2,3,4,5]]],
-    '40001': [['ERICA 대학 (그 외 소속)', [1,2,3,4,5]], ['경영학부', [2,3,4,5]]],
-  }[c.no] || [];
-  const rows = rule.length ? rule.map(([dept, grades]) => dialogCells([dept, ...[1,2,3,4,5].map(n => grades.includes(n) ? '제한' : '')])).join('')
-    : '<tr><td colspan="6">학년별 제한 정보 없음</td></tr>';
+  const det = c.isuJehanDetail;
+  const rows = (det && det.length)
+    ? det.map(d => dialogCells([d.sosok, ...d.grades.map(g => g || '')])).join('')
+    : `<tr><td colspan="6">${c.isuJehan ? '이 과목은 이수제한이 있습니다. 소속·학년별 상세는 포털에서 확인하세요.' : '이수제한 없음'}</td></tr>`;
   openCourseDialog('limit', '이수제한여부', dialogTable(['적용 대상 소속','1학년','2학년','3학년','4학년','5학년'], [32,13.6,13.6,13.6,13.6,13.6], rows)
-    + `<p class="grid-hint course-dialog-note">${escapeAttr(c.limit)}<br>위 표는 연습용 설정이며 실제 이수제한은 학교 안내를 확인해 주세요.</p>`);
+    + `<p class="grid-hint course-dialog-note">실제 수강편람 이수제한 데이터. 상세표가 없는 과목은 포털에서 확인해 주세요.</p>`);
 }
 function courseTimeTable(c) {
   // 캡처처럼 16주를 표시하는 모의 시간표. 실제 학사일정과 연결되지 않는다.
@@ -295,11 +297,22 @@ function weeklyCourseTable(courses) {
   </div>`;
 }
 function showCourseDetail(c) {
-  const rows = dialogCells(['일반','등급(ABCDEF)','N','N',''])
-    + `<tr><th scope="row">특수강좌</th><td colspan="4" class="course-detail-text">${c.no === '20002' ? 'HY-LIVE' : ''}</td></tr><tr><th scope="row">설명</th><td colspan="4" class="course-detail-text"></td></tr>`;
+  const rows = dialogCells([c.gangjwaType || '일반','등급(ABCDEF)', c.abek === 'Y' ? 'Y' : 'N','N',''])
+    + `<tr><th scope="row">특수강좌</th><td colspan="4" class="course-detail-text">${escapeAttr(c.teuksu || '')}</td></tr><tr><th scope="row">설명</th><td colspan="4" class="course-detail-text"></td></tr>`;
   openCourseDialog('detail', '과목 상세 정보', dialogTable(['강좌유형','성적부여형태','공학인증과목','교직과목','비고'], [15,42,15,15,13], rows));
 }
-const courseViews = { limit: showCourseLimit, timetable: showCourseTime, courseDetail: showCourseDetail };
+function showCourseDocument(c, syllabus) {
+  const fields = syllabus
+    ? [['수업번호', c.no], ['교과목명', c.name], ['교강사', c.prof], ['수업시간', c.time], ['강의실', c.room]]
+    : [['학수번호', c.code], ['교과목명', c.name], ['이수구분', c.type], ['학점', c.credit], ['설강학과', c.dept]];
+  openCourseDialog('detail', syllabus ? '강의계획서 조회' : '교과목 개요서 조회',
+    dialogTable(['항목', '내용'], [25,75], fields.map(dialogCells).join(''))
+    + '<p class="grid-hint course-dialog-note">목업의 과목 정보입니다. 실제 문서는 연결되어 있지 않습니다.</p>');
+}
+const courseViews = { limit: showCourseLimit, timetable: showCourseTime, courseDetail: showCourseDetail,
+  courseDepartment: c => openCourseDialog('detail', '설강학과',
+    dialogTable(['교과목명', '설강학과'], [50,50], dialogCells([c.name, c.dept]))),
+  syllabus: c => showCourseDocument(c, true), overview: c => showCourseDocument(c, false) };
 
 const ACT = {
   apply: c => apply(c),
@@ -321,7 +334,7 @@ const ACT = {
     const special = [...box.querySelectorAll('[name=special]:checked')].map(input => input.value);
     query[box.dataset.page] = { gubun: f('gubun'), type: f('type'), code: f('code'), name: f('name'), old: f('old'), year: f('year'), term: f('term'), grade: f('grade'), special, detail: !box.querySelector('.search-detail').hidden };
     found[box.dataset.page] = C.filter(c =>
-      f('year') === '2026' && f('term') === '겨울학기' &&
+      f('year') === '2026' && f('term') === '2학기' &&
       (f('grade') === '전체' || String(c.year) === f('grade')) &&
       (!special.length || special.some(tag => c.special?.includes(tag))) &&
       (c.old || '').includes(f('old')) &&

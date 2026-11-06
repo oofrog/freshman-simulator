@@ -51,6 +51,10 @@ table.grid { border-collapse: collapse; table-layout: fixed; }
 .grid-rail { display: flex; justify-content: space-between; margin-top: 17px; background: #fafafa; height: 14px; }
 .grid-rail button { border: 0; background: transparent; color: #909090; cursor: pointer; padding: 0 5px; font-size: 10px; }
 .grid td.hidden-type { display: none; }
+.grid tbody tr[data-no]:hover { background-color: #f0ebef; }
+.course-number { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.course-number .course-detail-button { flex: none; }
+.course-area { display: block; max-width: 3.6em; margin-inline: auto; word-break: normal; overflow-wrap: anywhere; line-height: 1.35; }
 input[type=text], input[type=number], input:not([type]), select { border: 1px solid #d7d7d7; height: 23px; padding: 2px; }
 input[type=button] { cursor: pointer; height: 23px; padding: 0 9px; border: 1px solid #ccc; background: linear-gradient(white, #f0f0f0); border-radius: 2px; font-size: 11px; }
 input[type=button].blue { background: linear-gradient(#4a75b7, #365f9e); border-color: #507bb8; color: white; }
@@ -85,9 +89,9 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .basic-section + .basic-section { margin-top: 18px; }
 .basic-grid td:not(.empty) { min-height: 29px; }
 #dev-guide { position: fixed; right: 16px; bottom: 16px; }
-.grid a[data-act=limit], .course-link { color: inherit; text-decoration: none; }
+.grid a[data-act=limit], .grid .course-text-link, .course-link { color: inherit; text-decoration: none; }
+.grid tbody tr[data-no]:hover :is(a[href], button:enabled, input[type=button]:enabled) { text-decoration: underline; text-underline-offset: 2px; }
 .course-link { border: 0; background: none; padding: 0; cursor: pointer; line-height: 1.4; }
-.grid a[data-act=limit]:hover, .course-link:hover { text-decoration: underline; }
 .course-detail-button { display: inline-grid; place-items: center; width: 20px; height: 19px; padding: 2px; border: 1px solid #ccc; border-radius: 2px; background: linear-gradient(white, #eee); vertical-align: middle; cursor: pointer; }
 .course-detail-button svg { width: 13px; height: 13px; fill: none; stroke: #777; stroke-width: 2; }
 .course-dialog { width: min(710px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; border: 0; color: inherit; background: white; box-shadow: 0 4px 24px #0006; }
