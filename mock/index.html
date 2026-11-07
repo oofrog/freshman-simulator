@@ -96,6 +96,7 @@ const col = {
   increase: ['증원신청', () => ''],
   increaseTarget: ['증원신청 대상자', () => ''],
   hopeApply: ['수강신청', c => done.includes(c.no) ? '' : btn('신청', 'apply', c, 'blue')], // 실제 희망수업은 이미 신청한 과목에 [신청]이 없다
+  hopeAdd: ['희망신청', c => btn('추가', 'hopeAdd', c)],
   hopeDel: ['희망수업 삭제', c => btn('희망삭제', 'hopeDel', c)],
   cancel: ['수강취소', c => btn('수강취소', 'cancel', c)],
   refund: ['환불', () => ''],
@@ -130,9 +131,9 @@ const hopeCols = 'check order hopeApply enrolled cap hope type unit area no code
 const hopeWidths = [30,67,61,40,40,40,58,42,59,66,94,144,85,77,48,35,52,56,30,48,23,22,22,43,105,115,45,92,85,90];
 const doneCols = 'cancel refund type unit area no code name notice accreditation retake retakeCode retakeName degree prof credit lec lab format seat time room detail dept manager'.split(' ');
 const doneWidths = [76,50,54,48,58,73,93,145,74,48,43,58,61,42,60,22,22,22,49,54,100,112,103,88,100];
-const basicCols = 'apply increase increaseTarget year cls type unit no code name notice accreditation degree prof credit lec lab format seat time room limit detail dept manager'.split(' ');
-const basicSubCols = basicCols.filter(k => k !== 'unit');
-const basicWidths = [49,49,72,27,21,55,55,63,75,145,68,58,52,70,22,22,22,61,49,93,122,60,85,91,92];
+const basicCols = 'apply increase increaseTarget year cls type unit no code name hopeAdd notice accreditation degree prof credit lec lab format seat time room limit detail dept manager'.split(' ');
+const basicSubCols = basicCols.filter(k => k !== 'unit' && k !== 'hopeAdd');
+const basicWidths = [49,49,72,27,21,55,55,63,75,145,64,68,58,52,70,22,22,22,61,49,93,122,60,85,91,92];
 const otherWidths = { check: 32, order: 75, year: 32, cls: 24, name: 140, time: 135, room: 125, dept: 100 };
 const grid = (keys, rows, id = 'gdMain') => {
   const visible = keys.filter(k => k !== 'hidden');
@@ -373,6 +374,13 @@ courseDialog.addEventListener('click', e => {
 const ACT = {
   apply: c => apply(c),
   quick: () => apply(byNo[edQuickSuupNo.value.trim()]),
+  hopeAdd: c => {
+    if (hope.includes(c.no)) return alert('이미 희망수업에 담긴 과목입니다.');
+    hope.push(c.no);
+    selectedHope.add(c.no);
+    c.hope++;
+    alert('희망수업에 추가되었습니다.');
+  },
   hopeDel: c => { hope = hope.filter(n => n !== c.no); selectedHope.delete(c.no); c.hope--; },
   cancel: c => { if (confirm(`${c.name} 수강을 취소하시겠습니까?`)) { done = done.filter(n => n !== c.no); c.enrolled--; } },
   orderSave: () => {
