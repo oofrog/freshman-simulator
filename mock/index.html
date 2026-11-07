@@ -125,8 +125,8 @@ const col = {
 const cellHtml = (k, c, i) => k === 'hidden' ? '<td class="hidden-type">1</td>'.repeat(3) : `<td>${col[k][1](c, i)}</td>`;
 const catalogCols = 'year cls type unit area no code old name preview notice accreditation degree prof credit lec lab format seat mode time room limit detail competency dept manager'.split(' ');
 const catalogWidths = [28,20,52,52,55,69,87,135,134,47,73,44,42,73,19,18,19,59,46,61,94,82,64,95,73,74,108];
-const applyCols = ['apply', 'increase', 'increaseTarget', 'hidden', ...catalogCols];
-const applyWidths = [58,58,112, ...catalogWidths];
+const applyCols = ['apply', 'increase', 'increaseTarget', 'hidden', ...catalogCols.flatMap(k => k === 'preview' ? [k, 'hopeAdd'] : [k])];
+const applyWidths = [58,58,112, ...catalogCols.flatMap((k, i) => k === 'preview' ? [catalogWidths[i], 64] : [catalogWidths[i]])];
 const hopeCols = 'check order hopeApply enrolled cap hope type unit area no code name notice hopeDel accreditation retake retakeCode retakeName degree prof credit lec lab format time room limit detail dept manager'.split(' ');
 const hopeWidths = [30,67,61,40,40,40,58,42,59,66,94,144,85,77,48,35,52,56,30,48,23,22,22,43,105,115,45,92,85,90];
 const doneCols = 'cancel refund type unit area no code name notice accreditation retake retakeCode retakeName degree prof credit lec lab format seat time room detail dept manager'.split(' ');
