@@ -5,7 +5,8 @@ input, select, button { font: inherit; color: #4f535c; }
 #logo-area { display: flex; align-items: end; justify-content: space-between; gap: 12px; height: 45px; padding: 0 9% 5px 10px; background: linear-gradient(#f3f5f6, #dfe1e4); box-shadow: inset 0 2px #c3d1d6; overflow: auto hidden; scrollbar-width: none; white-space: nowrap; }
 #logo-area h2 { margin: 0 12px 0 4px; padding: 3px 0 3px 8px; border-left: 1px solid #bac2cb; font-size: 16px; color: #55606d; }
 .left-area, .right-area, .quick-area { display: flex; align-items: center; gap: 6px; }
-.left-area img { width: 110px; height: auto; display: block; }
+.school-name { width: 110px; color: #294e7b; font-size: 17px; font-weight: bold; }
+.mock-badge { padding: 2px 6px; border: 1px solid #9aacc3; border-radius: 3px; color: #294e7b; font-weight: bold; }
 .right-area { gap: 14px; }
 .right-area a { color: #9e2a20; font-size: 16px; font-weight: bold; text-decoration: none; }
 #edQuickSuupNo { width: 86px; }
@@ -13,10 +14,15 @@ input, select, button { font: inherit; color: #4f535c; }
 #snb ul { display: flex; flex: none; list-style: none; margin: 0; padding: 0; }
 #snb li a { display: block; padding: 0 14px; line-height: 41px; color: white; font-weight: bold; text-decoration: none; }
 #snb li a:hover, #snb li a:focus-visible { background: #555967; }
+#menu .sub_category { display: none; position: absolute; z-index: 2; background: #4c4f5b; }
+#menu li:hover > .sub_category, #menu li:focus-within > .sub_category { display: block; }
+#menu .sub_category ul { display: block; }
+#menu .sub_category a { line-height: 28px; }
+#menu .over-btn { cursor: pointer; }
 .credits { display: flex; gap: 13px; padding-right: 6px; color: #c6c7ca; }
-.credits label { display: flex; align-items: center; gap: 4px; }
+.credits .text-type { margin-right: -9px; }
 .credits input { width: 43px; text-align: right; background: #eeeee8; }
-.credits label:last-child input { width: 53px; }
+.credits input:last-child { width: 53px; }
 #hyinContents { padding: 22px; }
 .header { border-bottom: 1px solid #e8e8e8; margin-bottom: 14px; padding-bottom: 10px; }
 .header h3 { position: relative; margin: 0; padding-left: 14px; font-size: 17px; line-height: 24px; }
@@ -60,10 +66,10 @@ input[type=button] { cursor: pointer; height: 23px; padding: 0 9px; border: 1px 
 input[type=button].blue { background: linear-gradient(#4a75b7, #365f9e); border-color: #507bb8; color: white; }
 .notice { color: #9e2a20; margin: 6px 0; }
 .toolbar { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
-.hope-toolbar { gap: 5px; margin-bottom: 14px; }
+.hope-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 5px; list-style: none; padding: 0; margin: 6px 0 9px; }
+.hope-toolbar > li:last-child { flex-basis: 100%; }
 .hope-toolbar #btn_siganpyo { margin-right: 14px; }
 .hope-toolbar input[readonly] { width: 32px; text-align: center; background: #f2f2f2; }
-.hope-notice { margin: 0 0 9px; }
 .hope-sort { margin: 4px 0 5px; }
 .done-toolbar { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 4px 12px; }
 .done-toolbar .grid-hint { margin-bottom: 2px; }
