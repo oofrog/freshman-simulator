@@ -6,13 +6,14 @@
 // 메시지는 실제 화면의 "시스템 메시지"와 같은 모양으로 띄운다. 실제 화면 정리·아직 필요한 데이터: docs/real-screen.md
 (() => {
   const COUNTDOWN = 5; // 시작 전 카운트다운(초)
-  const { closeSec, judge, summarize } = SG.engine;
+  const { closeSec, judge, summarize, queueAt } = SG.engine;
 
   // 신청 결과 문구는 서버가 보내 줘서 화면 코드에 없다. 실제 문구를 확인하기 전까지 임시.
   const MSG = {
     notOpen: '수강신청 기간이 아닙니다.',
     full: '정원이 초과되었습니다.',
     done: '수강신청이 완료되었습니다.',
+    queueClosed: '499 : 닫기 버튼을 클릭했습니다.', // 실제 문구 (포털 신청 코드 + 넷퍼넬 Close 코드 499)
   };
 
   // 실제 [신청] 버튼의 클래스 (2026-10-14 실제 화면). 표에 [신청]이 하나도 없을 때만 쓴다
@@ -25,6 +26,12 @@
     .sg-sys .ui-dialog{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px}
     .sg-sys .ui-dialog-content{min-height:55px}
     .sg-count .sg-btn{margin-left:12px;background:#fff;color:#111827;font-weight:bold}
+    .sg-wait[data-sg]{position:fixed;inset:0;z-index:2147483645;background:#0005;display:flex;align-items:center;justify-content:center}
+    .sg-wait-box{width:320px;max-width:calc(100vw - 32px);background:#fff;border-radius:8px;padding:20px;text-align:center;box-shadow:0 8px 24px #0005}
+    .sg-wait-box p{margin:8px 0}
+    .sg-wait-track{height:8px;border-radius:4px;background:#e5e7eb;overflow:hidden}
+    .sg-wait-bar{height:100%;background:#2563eb}
+    .sg-wait-note{color:#b45309;font-size:12px}
     .sg-result[data-sg]{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-result .sg-box{background:#fff;border-radius:10px;padding:18px 20px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 8px 24px #0005}
     .sg-result p{margin:4px 0 8px}
@@ -50,8 +57,9 @@
     .sg-sys .ui-button-text{display:inline-block;padding:6px 10px;font-size:9pt;color:#656565}`;
   const hasTheme = () => [...document.styleSheets].some(sh => /jquery-ui/i.test(sh.href || ''));
 
-  // 진행 중인 연습: { rows, clicks, extras, dialog, timer, openAt, done }
+  // 진행 중인 연습: { rows, clicks, extras, dialog, timer, openAt, done, queue, left }
   // openAt: 신청이 열리는 performance.now 시각 (카운트다운 전에는 0), clicks: 누른 기록 (엔진 summarize 형식), done: 결과 요약을 띄움
+  // queue: 대기 화면 타이머 (0이면 대기 중 아님), left: [닫기]로 나온 줄에 섰던 시각 (없으면 null)
   let s = null;
 
   const num = (tr, col) => parseInt((SG.cell(tr, col)?.textContent || '').replace(/\D/g, ''), 10);
@@ -100,14 +108,61 @@
   // 신청이 열린 뒤 지난 시간(초). 열리기 전은 음수
   const elapsed = me => me.openAt ? (performance.now() - me.openAt) / 1000 : -Infinity;
 
-  // 마감 여부는 누른 순간의 시각으로 정한다. 마감이면 실제 화면처럼 [신청]이 그대로 남는다
-  const apply = row => {
-    if (s.done) return;
-    const t = elapsed(s);
+  // 대기열을 통과해 서버에 도착한 신청. 마감 여부는 줄을 선(누른) 시각으로 정한다. 마감이면 실제 화면처럼 [신청]이 그대로 남는다
+  const submit = (row, t) => {
     s.clicks.push({ course: s.rows.indexOf(row), t });
     const result = judge(row.hope, row.cap, t);
     if (result === 'done') row.fake.style.display = 'none'; // 실제 화면도 신청에 성공하면 그 행의 [신청] 버튼을 숨긴다
     return sysMessage(MSG[result]);
+  };
+
+  const waitText = sec => sec < 60 ? '1분 이내' : `${Math.ceil(sec / 60)}분`;
+
+  // 대기 화면. 표시 항목(앞·뒤 대기 인원, 예상 시간, 진행률, 닫기)은 넷퍼넬 코드 기준이고, 모양과 글자는 실제 템플릿을 못 봐서 임시다.
+  // 줄을 끝까지 기다려야 서버로 간다. [닫기]로 나오면 자리를 잃고, 다시 누르면 그 시각에 맨 뒤로 새로 선다
+  const enterQueue = (row, t, left) => {
+    const me = s, first = queueAt(t).ahead, stayed = left === null ? first : queueAt(left, t).ahead;
+    const time = h('b', ''), ahead = h('b', ''), behind = h('b', ''), bar = h('div', 'sg-wait-bar');
+    const leave = () => {
+      clearTimeout(me.queue);
+      me.queue = 0;
+      me.left = t;
+      sysMessage(MSG.queueClosed);
+    };
+    // 안내 문구는 실제 화면에 없는, 연습용으로 넣은 것
+    const note = first > stayed ? [h('p', 'sg-wait-note', `[닫기]로 줄에서 나와 맨 뒤로 다시 섰어요. 그대로 기다렸다면 앞에 ${stayed}명이었는데 지금은 ${first}명입니다.`)] : [];
+    const box = SG.el('div', { className: 'sg-wait' },
+      h('div', 'sg-wait-box',
+        h('b', '', '접속 대기 중입니다'),
+        h('p', '', '예상 대기 시간 ', time),
+        h('div', 'sg-wait-track', bar),
+        h('p', '', '앞 ', ahead, '명 · 뒤 ', behind, '명'),
+        ...note,
+        h('div', 'sg-row', SG.el('button', { className: 'sg-btn', textContent: '닫기', onclick: leave }))));
+    me.dialog?.remove();
+    document.body.append(box);
+    me.dialog = box;
+    const tick = () => {
+      const q = queueAt(t, elapsed(me));
+      if (q.wait <= 0) {
+        me.queue = 0;
+        return submit(row, t);
+      }
+      time.textContent = waitText(q.wait);
+      ahead.textContent = q.ahead;
+      behind.textContent = q.behind;
+      bar.style.width = `${q.progress}%`;
+      me.queue = setTimeout(tick, 100);
+    };
+    tick();
+  };
+
+  // 실제 넷퍼넬도 줄이 돌고 있으면 다시 호출해도 아무 일 없이 끝난다 (순번이 늘지 않는다). 대기 화면이 덮어도 Enter로 다시 눌릴 수 있어 여기서 막는다
+  const apply = row => {
+    if (s.done || s.queue) return;
+    const t = elapsed(s), left = s.left;
+    s.left = null;
+    return queueAt(t).wait > 0 ? enterQueue(row, t, left) : submit(row, t);
   };
 
   // 결과 요약: 과목마다 결과·누른 시각·마감·차이. [다시 하기]는 처음부터, [닫기]는 연습을 끝내고 화면을 되돌린다
@@ -117,6 +172,8 @@
   const finish = me => {
     if (me.done) return;
     me.done = true;
+    clearTimeout(me.queue);
+    me.queue = 0;
     me.dialog?.remove();
     const sum = summarize(me.rows, me.clicks);
     const count = k => sum.filter(r => r.result === k).length;
@@ -165,7 +222,7 @@
         SG.goMenu('희망수업');
         await SG.waitFor(() => SG.screen() === '희망수업' && SG.grid());
       }
-      const me = s = { rows: [], clicks: [], extras: [], dialog: null, timer: 0, openAt: 0, done: false };
+      const me = s = { rows: [], clicks: [], extras: [], dialog: null, timer: 0, openAt: 0, done: false, queue: 0, left: null };
       const trs = SG.rows();
       const sample = trs.map(tr => SG.findButton(tr, '신청')).find(Boolean);
       const look = sample ? lookOf(sample) : REAL_LOOK;
@@ -216,6 +273,7 @@
     stop() {
       if (!s) return;
       clearTimeout(s.timer);
+      clearTimeout(s.queue);
       s.rows.forEach(r => {
         r.fake.remove();
         if (r.host) r.host.style.display = r.display;
@@ -225,7 +283,7 @@
       s.dialog?.remove();
       s = null;
     },
-    // Esc는 시스템 메시지만 닫고 연습은 계속. 결과창이 떠 있으면 [닫기]와 같다
-    escape() { if (s?.done) return SG.stop(); s?.dialog?.remove(); },
+    // Esc는 시스템 메시지만 닫고 연습은 계속 (대기 화면은 [닫기]로만 나간다). 결과창이 떠 있으면 [닫기]와 같다
+    escape() { if (s?.done) return SG.stop(); if (!s?.queue) s?.dialog?.remove(); },
   });
 })();
