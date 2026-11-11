@@ -122,6 +122,29 @@ window.SG = (() => {
   };
   const clear = () => { unhighlight(); hover(null); bubbleEl?.remove(); modalEl?.remove(); };
 
+  // 페이지 자체 호버 끄기 (자유 팁): 학교 CSS의 :hover 규칙과 마우스 이동 이벤트를 막고, 커서를 기본 화살표로 통일한다.
+  // :hover 규칙은 절대 맞지 않는 :not(*)로 바꿔 두었다가 끌 때 원래대로 되돌린다 (다른 출처 CSS는 읽을 수 없어 건너뜀)
+  const HOVER_EVENTS = ['mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'mousemove', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave', 'pointermove'];
+  const stopHover = e => { if (!e.target.closest?.('[data-sg]')) e.stopPropagation(); };
+  let muted = null; // [규칙, 원래 선택자] 목록
+  const quiet = on => {
+    if (!on === !muted) return;
+    document.documentElement.classList.toggle('sg-quiet', on);
+    HOVER_EVENTS.forEach(t => (on ? addEventListener : removeEventListener)(t, stopHover, true));
+    if (!on) { muted.forEach(([r, s]) => { r.selectorText = s; }); muted = null; return; }
+    muted = [];
+    const walk = list => {
+      for (const r of list) {
+        if (r.selectorText?.includes(':hover')) { muted.push([r, r.selectorText]); r.selectorText = r.selectorText.replace(/:hover\b/g, ':not(*)'); }
+        if (r.cssRules) walk(r.cssRules); // @media 등 안쪽 규칙
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      if (sheet.ownerNode?.dataset?.sg !== undefined) continue;
+      try { walk(sheet.cssRules); } catch { /* 다른 출처 CSS */ }
+    }
+  };
+
   // ---------- 실제 클릭 차단 ----------
   // 켜져 있는 동안 페이지 버튼은 기본적으로 전부 막는다. 모드가 allow(el)로 예외를 줄 수 있다.
   // 모드가 없을 때는 메뉴 이동·조회·입력칸만 허용 (서버 상태를 바꾸지 않는 것만)
@@ -151,7 +174,7 @@ window.SG = (() => {
   };
   function stop() {
     if (!current) return;
-    try { modes[current].stop?.(); } finally { current = null; clear(); renderPanel(); }
+    try { modes[current].stop?.(); } finally { current = null; clear(); quiet(false); renderPanel(); }
   }
   const renderPanel = () => {
     if (!ui) return;
@@ -162,6 +185,15 @@ window.SG = (() => {
         el('button', { className: 'sg-btn' + (name === current ? ' on' : ''), textContent: m.label, onclick: () => name === current ? stop() : start(name) })),
       el('button', { className: 'sg-btn off', textContent: '끄기', onclick: () => toggle() }));
   };
+  // 팁 있는 요소 위의 커서: 화살표 + 주황 물음표 (기본 help 커서보다 조금 크게). 2x 화면용 이미지도 같이 준다
+  const helpSvg = px => 'url("data:image/svg+xml,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 32 32">` +
+    '<path d="M3 2v20l5-4.5 3.5 7.5 3-1.3-3.5-7.4H17.5z" fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>' +
+    '<circle cx="24" cy="23" r="7" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/>' +
+    '<path d="M21.6 20.8a2.4 2.4 0 1 1 3.4 2.2c-.7.35-1 .8-1 1.6" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/>' +
+    '<circle cx="24" cy="27.4" r="1.1" fill="#fff"/></svg>') + '")';
+  const HELP_CURSOR = `${helpSvg(36)} 3 2, help`;
+  const HELP_CURSOR_2X = `image-set(${helpSvg(36)} 1x, ${helpSvg(72)} 2x) 3 2, help`;
   const CSS = `
     [data-sg]{font:13px/1.5 sans-serif;color:#111;box-sizing:border-box}
     .sg-panel{position:fixed;top:12px;right:12px;z-index:2147483646;background:#fff;border:2px solid #2563eb;border-radius:10px;padding:10px;width:200px;box-shadow:0 4px 16px #0003;display:flex;flex-direction:column;gap:6px}
@@ -175,7 +207,9 @@ window.SG = (() => {
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
     .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
-    .sg-hover{outline:2px dashed #f59e0b !important;outline-offset:-2px !important;cursor:help !important}`;
+    .sg-hover{outline:2px dashed #f59e0b !important;outline-offset:-2px !important}
+    html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
+    html.sg-quiet .sg-hover.sg-hover{cursor:${HELP_CURSOR} !important;cursor:${HELP_CURSOR_2X} !important}`;
 
   function toggle() {
     if (ui) {
@@ -194,6 +228,6 @@ window.SG = (() => {
   return {
     register, start, stop, toggle, get mode() { return current; },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
-    matchTip, tipEl, highlight, unhighlight, hover, bubble, modal, clear, el,
+    matchTip, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, clear, el,
   };
 })();
