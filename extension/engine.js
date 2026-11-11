@@ -55,7 +55,26 @@
     return { result: judge(hope, cap, first.t), at: first.t, close };
   });
 
-  const engine = { MODEL, closeSec, seatsLeft, judge, summarize };
+  // 대기열(넷퍼넬) 임시값. 실제 대기 시간 자료가 없어 근거 없음 (docs/real-screen.md "아직 필요한 데이터" 3번). 자료가 생기면 이 값만 고친다
+  // - crowd: 신청을 시작하는 전체 인원 (MODEL의 doneBy 곡선대로 줄에 선다)
+  // - drain: 1초에 줄을 통과하는 인원
+  const QUEUE = { crowd: 3000, drain: 300 };
+
+  // 시작 후 t초까지 줄에 선 사람 수
+  const arrived = t => t <= 0 ? 0 : QUEUE.crowd * doneBy(t);
+
+  // 시작 후 t초에 줄을 선 사람이 now초에 보는 대기 화면 값.
+  // { ahead: 앞 대기 인원, behind: 뒤 대기 인원, wait: 남은 시간(초), progress: 진행률(0~100) }. 시작 전이나 줄이 없으면 wait는 0
+  // 줄은 먼저 선 순서대로 빠지므로 뒤에 선 사람은 앞사람보다 먼저 빠지지 않는다. 그래서 판정은 대기가 끝난 시각이 아니라 줄을 선 시각(judge의 t)으로 한다
+  const queueAt = (t, now = t) => {
+    const line = Math.max(0, arrived(t) - QUEUE.drain * Math.max(t, 0)); // 줄을 선 순간의 앞 인원 (소수)
+    const start = Math.ceil(line);
+    if (!start) return { ahead: 0, behind: 0, wait: 0, progress: 100 };
+    const ahead = Math.max(0, Math.ceil(line - QUEUE.drain * (now - t)));
+    return { ahead, behind: Math.round(arrived(now) - arrived(t)), wait: ahead / QUEUE.drain, progress: Math.floor(100 * (1 - ahead / start)) };
+  };
+
+  const engine = { MODEL, QUEUE, closeSec, seatsLeft, judge, summarize, queueAt };
   if (globalThis.SG) SG.engine = engine;
   else module.exports = engine;
 })();
