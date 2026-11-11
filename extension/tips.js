@@ -79,14 +79,6 @@ SG.tips = [
     text: '졸업요건별 이수 현황을 확인하는 메뉴예요. 학과별 별도 졸업요건도 함께 확인해 주세요.',
     source: 'Figma N08 | ERICA 2026 졸업요건 사전확인 안내',
   },
-  {
-    id: 'common.menu.volunteer',
-    screen: '공통',
-    find: { menu: '사회봉사' },
-    title: '사회봉사',
-    text: '사회봉사 교과목의 안내와 신청 관련 기능을 확인하는 메뉴예요. 일반 수업과 신청 일정이 다를 수 있어요.',
-    source: 'Figma N10 | ERICA 포털 이용안내 사회봉사 기능',
-  },
   // 파랑: 생략 검토 중
   {
     id: 'common.menu.keyword',
@@ -154,15 +146,6 @@ SG.tips = [
     title: '학석사공통신청',
     text: '학사·석사 공통교과목 신청 관련 메뉴예요. 이용 대상과 신청 조건은 해당 학기 안내에서 확인해 주세요.',
     source: 'Figma N09 | 실제 화면 표시 확인',
-  },
-  // [보류] 빨강(정보 모름·보충 필요)
-  {
-    id: 'common.menu.summer',
-    screen: '공통',
-    find: { menu: '국제여름/겨울학교' },
-    title: '국제여름 겨울학교',
-    text: '국제여름·겨울학교 관련 메뉴예요. 개설 강좌와 참가 자격, 신청 일정은 해당 프로그램 공지를 확인해 주세요.',
-    source: 'Figma N11 | 국제여름학교·국제교류 안내(서울 운영 사례), 실제 화면 표시 확인',
   },
   // [보류] 빨강(정보 모름·보충 필요)
   {
@@ -335,7 +318,7 @@ SG.tips = [
   {
     id: 'hope.notice',
     screen: '희망수업',
-    find: { selector: '.notice' },
+    find: { selector: 'ul.w-20 > li:nth-child(3)' },
     title: '신청 전 최종 확인',
     text: '희망수업에 담은 뒤에도 수업시간이나 이수제한이 바뀔 수 있어요. 실제 신청 직전에 다시 확인해 주세요.',
     source: 'Figma H13 | 실제 화면 표시 확인',
@@ -413,7 +396,7 @@ SG.tips = [
   {
     id: 'hope.retakeName',
     screen: '희망수업',
-    find: { column: '재수강과목명' },
+    find: { column: '재수강과목' },
     title: '재수강 과목명',
     text: '재수강과 연결된 교과목명을 확인하는 항목이에요. 재수강 여부와 학수번호를 함께 확인해 주세요.',
     source: 'Figma H16 | ERICA 성적상승 재수강 안내, 실제 화면 표시 확인',
@@ -431,7 +414,7 @@ SG.tips = [
   {
     id: 'apply.scope',
     screen: '수강신청',
-    find: { selector: 'select[name=gubun]' },
+    find: { selector: '.sgsg-season' },
     title: '공통과목 학과과목',
     text: '공통과목과 학과과목 등 검색 범위를 고르는 항목이에요. 졸업학점 인정 여부는 본인의 교육과정에서 따로 확인해 주세요.',
     source: 'Figma A07 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
@@ -457,10 +440,19 @@ SG.tips = [
   {
     id: 'apply.detail',
     screen: '수강신청',
-    find: { button: '상세조회' },
+    find: { button: '▼상세조회' },
     title: '상세조회',
     text: '추가 검색 조건을 확인하는 버튼이에요. 특수강좌 등 필요한 조건을 함께 확인해 주세요.',
     source: 'Figma A05 | ERICA 수강신청 프로그램 이용방법',
+  },
+  // 파랑: 생략 검토 중. 결과 없음 칸은 첫 열 칸으로도 잡혀서 열 팁(apply.apply 등)보다 위에 둔다
+  {
+    id: 'apply.empty',
+    screen: '수강신청',
+    find: { selector: '#gdMain td.emptyDataList' },
+    title: '조회 결과 없음',
+    text: '아직 조회하지 않았거나 조건에 맞는 결과가 없다는 안내예요. 먼저 조회하고 검색 조건을 다시 확인해 주세요.',
+    source: 'Figma A12 | 실제 화면 표시 확인',
   },
   {
     id: 'apply.apply',
@@ -485,15 +477,6 @@ SG.tips = [
     title: '희망신청 열',
     text: '관심 수업을 희망수업 목록에 담는 열이에요. 좌석 예약이나 실제 수강신청 완료를 의미하지 않아요.',
     source: 'Figma A11 | ERICA 수강신청 프로그램 이용방법',
-  },
-  // 파랑: 생략 검토 중
-  {
-    id: 'apply.empty',
-    screen: '수강신청',
-    find: { selector: '#gdMain td.empty' },
-    title: '조회 결과 없음',
-    text: '아직 조회하지 않았거나 조건에 맞는 결과가 없다는 안내예요. 먼저 조회하고 검색 조건을 다시 확인해 주세요.',
-    source: 'Figma A12 | 실제 화면 표시 확인',
   },
   // [보류] 스크롤 막대만 가리킬 요소가 없음 (.grid-wrap은 표 전체를 감싸서 팁 없는 칸을 누르면 이 팁이 뜸)
   {
@@ -587,7 +570,7 @@ SG.tips = [
   {
     id: 'done.retakeName',
     screen: '신청내역',
-    find: { column: '재수강과목명' },
+    find: { column: '재수강과목' },
     title: '재수강 과목명',
     text: '재수강과 연결된 교과목 이름을 확인하는 항목이에요. 재수강 여부와 코드까지 함께 확인해 주세요.',
     source: 'Figma C05 | ERICA 성적상승 재수강 안내, 실제 화면 표시 확인',
@@ -596,7 +579,7 @@ SG.tips = [
   {
     id: 'done.print',
     screen: '신청내역',
-    find: { button: '신청과목시간표확인' },
+    find: { button: '신청과목시간표확인(고지서출력)' },
     title: '신청과목시간표확인 고지서출력',
     text: '신청한 과목의 시간표와 수강신청 확인서 등을 확인·출력하는 버튼이에요. 필요한 출력 종류는 팝업에서 선택해 주세요.',
     source: 'Figma C08 | ERICA 학사 FAQ 수강신청 확인서 출력',
