@@ -162,7 +162,7 @@ const searchBox = (page, q = query[page] || {}) => `<div class="search-box" data
     <span class="special-filters">특수강좌 ${['영어강의','E-러닝','SMART-F·B','PBL','산학협력영역'].map((label, i) => `<label><input type="checkbox" name="special" value="${i}"${q.special?.includes(String(i)) ? ' checked' : ''}> ${label}</label>`).join('')}</span>
     ${page === 'apply' ? `<div class="course-groups" role="group" aria-label="과목구분">${courseGroups.map((label, i) => {
       const id = ['all', 'gong', 'hak', 'pgm'][i];
-      return `<span class="sgsg-season" hidden><input type="radio" name="strIlbanCommonGb" id="${id}" value="${i || ''}"${label === (q.gubun || '전체') ? ' checked' : ''}><label for="${id}"> ${label}</label></span>`;
+      return `<span class="sgsg-season" inline><input type="radio" name="strIlbanCommonGb" id="${id}" value="${i || ''}"${label === (q.gubun || '전체') ? ' checked' : ''}><label for="${id}"> ${label}</label></span>`;
     }).join('')}</div>` : ''}
   </div>
   <div class="search-row">
