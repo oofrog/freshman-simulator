@@ -227,7 +227,7 @@ document.getElementById('menu').innerHTML = PAGES.map(([key, title]) => {
   const group = menuGroups[key];
   if (!group) return `<li><a href="#!${key}" title="${title}">${title}</a></li>`;
   const links = group.map((label, i) => `<li><a href="#!${key}-${i}" title="${label}">${label}</a></li>`).join('');
-  return `<li><a class="over-btn" tabindex="0">${title}</a><div class="sub_category"><div class="list_scroll"><div class="list"><ul>${links}</ul></div></div></div></li>`;
+  return `<li><a class="over-btn" role="button" tabindex="0" aria-expanded="false" aria-controls="submenu-${key}">${title}</a><div id="submenu-${key}" class="sub_category" hidden><div class="list_scroll"><div class="list"><ul>${links}</ul></div></div></div></li>`;
 }).join('');
 for (const [key, labels] of Object.entries(menuGroups)) {
   labels.forEach((label, i) => PAGES.push([`${key}-${i}`, label, unsupported]));
@@ -240,7 +240,48 @@ function render() {
   document.getElementById('hyinContents').innerHTML = `<div class="header"><h3 class="txt_title">${title}</h3></div><div class="hyinTemplate">${view()}</div>`;
   edMinHakjeom.value = ME.min; edMaxHakjeom.value = ME.max; edSincheongHakjeom.value = sum();
 }
-addEventListener('hashchange', render);
+let openMenu = null;
+function positionSubmenu() {
+  if (!openMenu) return;
+  const bounds = openMenu.getBoundingClientRect();
+  const panel = openMenu.nextElementSibling;
+  panel.style.left = Math.max(0, Math.min(bounds.left, document.documentElement.clientWidth - panel.offsetWidth)) + 'px';
+  panel.style.top = bounds.bottom + 'px';
+}
+
+function setOpenMenu(trigger) {
+  if (openMenu) {
+    openMenu.setAttribute('aria-expanded', 'false');
+    openMenu.nextElementSibling.hidden = true;
+  }
+  openMenu = trigger;
+  if (openMenu) {
+    openMenu.setAttribute('aria-expanded', 'true');
+    openMenu.nextElementSibling.hidden = false;
+    positionSubmenu();
+  }
+}
+
+document.getElementById('snb').addEventListener('scroll', positionSubmenu);
+addEventListener('scroll', positionSubmenu);
+addEventListener('resize', positionSubmenu);
+addEventListener('hashchange', () => {
+  setOpenMenu(null);
+  render();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && openMenu) {
+    const trigger = openMenu;
+    setOpenMenu(null);
+    trigger.focus();
+  }
+  const trigger = e.target.closest('#menu .over-btn');
+  if (trigger && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    trigger.click();
+  }
+});
 
 // ---------- 동작 ----------
 function apply(c) {
@@ -424,6 +465,14 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
+  const menuTrigger = e.target.closest('#menu .over-btn');
+  if (menuTrigger) {
+    setOpenMenu(menuTrigger === openMenu ? null : menuTrigger);
+    return;
+  }
+  if (openMenu && (!openMenu.nextElementSibling.contains(e.target) || e.target.closest('a[href]'))) {
+    setOpenMenu(null);
+  }
   const detail = e.target.closest('[data-detail]');
   if (detail) {
     const panel = detail.closest('.search-box').querySelector('.search-detail');

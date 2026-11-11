@@ -14,11 +14,21 @@ input, select, button { font: inherit; color: #4f535c; }
 #snb ul { display: flex; flex: none; list-style: none; margin: 0; padding: 0; }
 #snb li a { display: block; padding: 0 14px; line-height: 41px; color: white; font-weight: bold; text-decoration: none; }
 #snb li a:hover, #snb li a:focus-visible { background: #555967; }
-#menu .sub_category { display: none; position: absolute; z-index: 2; background: #4c4f5b; }
-#menu li:hover > .sub_category, #menu li:focus-within > .sub_category { display: block; }
-#menu .sub_category ul { display: block; }
-#menu .sub_category a { line-height: 28px; }
 #menu .over-btn { cursor: pointer; }
+#menu .over-btn[aria-expanded="true"] { background: linear-gradient(#f7f7f9, #ebebed); color: #00a9da; }
+#menu .sub_category {
+  position: fixed;
+  z-index: 2;
+  width: min(730px, 100%);
+  min-height: 147px;
+  padding: 20px 22px 15px;
+  border: 1px solid #494c56;
+  background: linear-gradient(#ededf0, #dadadc);
+  box-shadow: 1px 2px 7px #0002;
+}
+#menu .sub_category ul { display: block; width: fit-content; min-width: 160px; min-height: 110px; padding-right: 24px; border-right: 1px solid #cccdd0; }
+#menu .sub_category a { padding: 0; color: #4c4f5b; font-weight: normal; line-height: 22px; }
+#menu .sub_category a:hover, #menu .sub_category a:focus-visible { background: transparent; color: #007da5; text-decoration: underline; }
 .credits { display: flex; gap: 13px; padding-right: 6px; color: #c6c7ca; }
 .credits .text-type { margin-right: -9px; }
 .credits input { width: 43px; text-align: right; background: #eeeee8; }
