@@ -111,7 +111,16 @@ window.SG = (() => {
     document.body.append(back);
     modalEl = back;
   });
-  const clear = () => { unhighlight(); bubbleEl?.remove(); modalEl?.remove(); };
+  // 마우스를 올린 요소에 점선 테두리 (자유 팁: 팁이 있는 요소만). null이면 지움.
+  // 화면 요소에 class 하나만 붙였다 떼므로 표를 다시 그려도 남는 것이 없다
+  let hovered = null;
+  const hover = target => {
+    if (hovered === target) return;
+    hovered?.classList.remove('sg-hover');
+    hovered = target || null;
+    hovered?.classList.add('sg-hover');
+  };
+  const clear = () => { unhighlight(); hover(null); bubbleEl?.remove(); modalEl?.remove(); };
 
   // ---------- 실제 클릭 차단 ----------
   // 켜져 있는 동안 페이지 버튼은 기본적으로 전부 막는다. 모드가 allow(el)로 예외를 줄 수 있다.
@@ -165,7 +174,8 @@ window.SG = (() => {
     .sg-bubble p,.sg-modal p{margin:4px 0;white-space:pre-line}
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
-    .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}`;
+    .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+    .sg-hover{outline:2px dashed #f59e0b !important;outline-offset:-2px !important;cursor:help !important}`;
 
   function toggle() {
     if (ui) {
@@ -184,6 +194,6 @@ window.SG = (() => {
   return {
     register, start, stop, toggle, get mode() { return current; },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
-    matchTip, tipEl, highlight, unhighlight, bubble, modal, clear, el,
+    matchTip, tipEl, highlight, unhighlight, hover, bubble, modal, clear, el,
   };
 })();
