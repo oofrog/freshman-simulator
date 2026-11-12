@@ -95,7 +95,7 @@ window.SG = (() => {
       const c = p.getBoundingClientRect(), l = c.left + p.clientLeft, tp = c.top + p.clientTop;
       [left, top, right, bottom] = [Math.max(left, l), Math.max(top, tp), Math.min(right, l + p.clientWidth), Math.min(bottom, tp + p.clientHeight)];
     }
-    return right > left && bottom > top ? { top, right } : null;
+    return right > left && bottom > top ? { left, top, right, bottom } : null;
   };
   // 오른쪽 위 "?" 배지: 호버 중인 요소와 자유 팁에서 누른 요소에 붙인다. 확장 요소로 따로 띄우므로 표를 다시 그려도 남는 것이 없다
   const badges = new Map(); // 화면 요소 → 배지
@@ -115,10 +115,7 @@ window.SG = (() => {
     const want = new Set([hovered, lit?.thin && lit.el].filter(Boolean));
     badges.forEach((b, t) => { if (!want.has(t)) { b.remove(); badges.delete(t); } });
     want.forEach(t => { if (!badges.has(t)) badges.set(t, document.body.appendChild(el('span', { className: 'sg-badge', textContent: '?' }))); });
-    // 스크롤(표 가로 스크롤 포함)·창 크기 변경 때 배지를 다시 놓는다
-    const on = badges.size > 0;
-    ['scroll', 'resize'].forEach(t => (on ? addEventListener : removeEventListener)(t, placeBadges, true));
-    if (on) gone.observe(document.body, { childList: true, subtree: true }); else gone.disconnect();
+    if (badges.size) gone.observe(document.body, { childList: true, subtree: true }); else gone.disconnect();
     placeBadges();
   };
   // 강조 테두리. thin이면 호버와 같은 모양(얇은 테두리 + 배지, 자유 팁에서 누른 요소), 아니면 굵게 (튜토리얼 단계)
@@ -137,7 +134,22 @@ window.SG = (() => {
     if (thin) { t.classList.remove('sg-lit'); syncBadges(); }
     else [t.style.outline, t.style.outlineOffset] = prev;
   };
-  // 말풍선: target 근처에 표시. buttons를 주면 누른 버튼 글자로 resolve
+  // 말풍선: target의 보이는 부분 아래(자리가 없으면 위)에 놓는다. 스크롤·창 크기 변경 때 다시 놓아 요소를 따라간다.
+  // target이 가려지면 숨긴다. 단 버튼이 있는 말풍선(튜토리얼)은 눌러야 넘어가므로 숨기지 않고 원래 위치 기준으로 둔다
+  let bubbleAt = null; // { el: 가리키는 요소, keep: 가려져도 보이게 둘지 }
+  const placeBubble = () => {
+    const box = bubbleEl, t = bubbleAt?.el;
+    if (!box?.isConnected || !t?.isConnected) return; // 요소가 문서에서 빠졌으면 마지막 자리에 둔다
+    const r = shownRect(t) || (bubbleAt.keep ? t.getBoundingClientRect() : null);
+    box.hidden = !r;
+    if (!r) return;
+    const below = r.bottom + box.offsetHeight + 12 < viewH();
+    box.style.left = Math.max(8, Math.min(r.left, viewW() - box.offsetWidth - 8)) + scrollX + 'px';
+    box.style.top = (below ? r.bottom + 8 : r.top - box.offsetHeight - 8) + scrollY + 'px';
+  };
+  // 배지·말풍선 다시 놓기: 확장이 켜져 있는 동안 스크롤(표 가로 스크롤 등 안쪽 스크롤 포함)·창 크기 변경 때 부른다
+  const place = () => { placeBadges(); placeBubble(); };
+  // buttons를 주면 누른 버튼 글자로 resolve
   const bubble = (target, { title = '', text = '', buttons: btns = [] }) => new Promise(done => {
     bubbleEl?.remove();
     const box = el('div', { className: 'sg-bubble' },
@@ -145,11 +157,9 @@ window.SG = (() => {
       el('p', { textContent: text }),
       ...(btns.length ? [el('div', { className: 'sg-row' }, ...btns.map(b => el('button', { className: 'sg-btn', textContent: b, onclick: () => { box.remove(); done(b); } })))] : []));
     document.body.append(box);
-    const r = target.getBoundingClientRect();
-    const below = r.bottom + box.offsetHeight + 12 < viewH();
-    box.style.left = Math.max(8, Math.min(r.left, viewW() - box.offsetWidth - 8)) + scrollX + 'px';
-    box.style.top = (below ? r.bottom + 8 : r.top - box.offsetHeight - 8) + scrollY + 'px';
     bubbleEl = box;
+    bubbleAt = { el: target, keep: btns.length > 0 };
+    placeBubble();
   });
   // 모달: 화면 가운데. 누른 버튼 글자로 resolve
   const modal = ({ title = '', text = '', buttons: btns = ['확인'] }) => new Promise(done => {
@@ -271,6 +281,7 @@ window.SG = (() => {
     if (ui) {
       stop();
       EVENTS.forEach(t => removeEventListener(t, guard, true));
+      ['scroll', 'resize'].forEach(t => removeEventListener(t, place, true));
       ui.panel.remove(); ui.style.remove(); ui = null;
       return;
     }
@@ -278,6 +289,7 @@ window.SG = (() => {
     document.head.append(ui.style);
     document.body.append(ui.panel);
     EVENTS.forEach(t => addEventListener(t, guard, true));
+    ['scroll', 'resize'].forEach(t => addEventListener(t, place, true));
     renderPanel();
   }
 
