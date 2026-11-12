@@ -91,34 +91,22 @@ SG.tips = [
   {
     id: 'common.quick',
     screen: '공통',
-    find: { selector: '#edQuickSuupNo, #btn_save_quick' },
+    find: { selector: '.quick-area' }, // 묶음: '수업번호' 글자·입력칸·[신청]
     title: '수업번호 빠른 신청',
     text: '개별 수업의 수업번호를 입력해 바로 신청하는 기능이에요. 학수번호와 구분하고 신청 후 결과를 확인해 주세요.',
     source: 'Figma N16 | ERICA 수강신청 프로그램 이용방법',
   },
+  // 묶음: 최소·최대·신청학점 (+영어등급) 칸 전체. 칸은 disabled라 core CSS로 클릭을 이 영역에 넘긴다
   {
-    id: 'common.credit.min',
+    id: 'common.credit',
     screen: '공통',
-    find: { selector: '#edMinHakjeom' },
-    title: '최소학점',
-    text: '이번 학기에 신청해야 하는 최소학점으로 표시된 값이에요. 본인의 학적과 해당 학기 기준을 확인해 주세요.',
-    source: 'Figma N13 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.credit.max',
-    screen: '공통',
-    find: { selector: '#edMaxHakjeom' },
-    title: '최대학점',
-    text: '이번 학기에 신청할 수 있는 최대학점으로 표시된 값이에요. 화면의 본인 적용값을 기준으로 확인해 주세요.',
-    source: 'Figma N14 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.credit.sum',
-    screen: '공통',
-    find: { selector: '#edSincheongHakjeom' },
-    title: '신청학점',
-    text: '현재 실제로 신청된 과목의 학점 합계를 확인하는 항목이에요. 희망수업의 후보 학점 합계와 구분해 주세요.',
-    source: 'Figma N15 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
+    find: { selector: '.hakjeom-area' },
+    title: '최소·최대·신청학점',
+    text: '최소학점: 이번 학기에 신청해야 하는 최소학점으로 표시된 값이에요.\n' +
+      '최대학점: 이번 학기에 신청할 수 있는 최대학점으로 표시된 값이에요.\n' +
+      '신청학점: 현재 실제로 신청된 과목의 학점 합계예요. 희망수업의 후보 학점 합계와 구분해 주세요.\n' +
+      '본인의 학적과 해당 학기 기준, 화면의 본인 적용값을 확인해 주세요.',
+    source: 'Figma N13·N14·N15 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
   },
   // [보류] 연결할 화면 요소(선택자) 미확인
   {
@@ -310,7 +298,7 @@ SG.tips = [
   {
     id: 'hope.total',
     screen: '희망수업',
-    find: { selector: '#edGwamok, #edHakjeom' },
+    find: { selector: 'li:has(> #edGwamok)' }, // 묶음: 'N 과목 / N 학점' 줄 (같은 줄의 시간표보기 버튼은 자기 팁이 먼저 뜸)
     title: '과목 수 학점 합계',
     text: '희망수업에 담긴 후보 과목 수와 학점 합계예요. 실제 신청된 학점이나 이번 학기 최대학점과는 구분해 주세요.',
     source: 'Figma H05 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
@@ -342,7 +330,7 @@ SG.tips = [
   {
     id: 'hope.delete',
     screen: '희망수업',
-    find: { button: '희망삭제' },
+    find: { column: '희망수업 삭제' }, // 묶음: 버튼 대신 칸 전체(머리글 포함)
     title: '희망삭제',
     text: '이 과목을 희망수업 목록에서 빼는 버튼이에요. 이미 신청한 수업을 취소하는 기능과는 달라요.',
     source: 'Figma H12 | ERICA 수강신청 프로그램 이용방법',
@@ -510,7 +498,7 @@ SG.tips = [
   {
     id: 'done.cancel',
     screen: '신청내역',
-    find: { button: '수강취소' },
+    find: { column: '수강취소' }, // 묶음: 버튼 대신 칸 전체(머리글 포함)
     title: '수강취소',
     text: '이미 신청한 수업을 취소하는 버튼이에요. 취소 가능 기간과 제한을 확인하고, 처리 후 신청내역을 다시 확인해 주세요.',
     source: 'Figma C02 | ERICA 수강신청 프로그램 이용방법, 2026-2 ERICA 증원신청 공지',

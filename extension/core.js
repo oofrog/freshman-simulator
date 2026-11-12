@@ -272,11 +272,13 @@ window.SG = (() => {
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
     .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+    input:disabled:not([type=button]):not([type=submit]),select:disabled,textarea:disabled{pointer-events:none}
     .sg-hover,.sg-lit{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
     .sg-badge{position:absolute;z-index:2147483645;width:16px;height:16px;border-radius:50%;background:#f59e0b;color:#fff;font:bold 11px/16px sans-serif;text-align:center;pointer-events:none;box-shadow:0 1px 3px #0005}
     html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
     html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:help !important}`;
   // 마지막 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 도움말 커서(운영체제 기본)를 같이 준다
+  // 첫 줄: disabled 칸은 클릭 이벤트가 아예 안 와서 팁이 안 뜬다 → 클릭을 부모로 넘겨 묶음 팁(.hakjeom-area 등)이 받게 한다
 
   function toggle() {
     if (ui) {

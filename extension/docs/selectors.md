@@ -17,12 +17,12 @@
 | 열 "신청인원" · "제한인원" · "희망인원" | 희망수업 | ✅ | ✅ |
 | 열 "교과목명" · "이수제한 여부" · "학점" · "수업시간" | 희망수업 | ✅ | ✅ |
 | 열 "수강/ 정원" · "이수제한 여부" · "교과목명" | 기본수업·수강신청 | ✅ | ✅ |
-| 버튼 "신청" · "희망삭제" | 희망수업 | ✅ | ✅ |
+| 버튼 "신청" · "희망삭제" (희망삭제 팁은 묶음: 열 "희망수업 삭제") | 희망수업 | ✅ | ✅ |
 | 버튼 "신청" · "추가" | 기본수업·수강신청 | ✅ | ✅ |
 | 버튼 "조회" · "초기화" | 수강신청 | ✅ | ✅ |
-| 버튼 "수강취소" | 신청내역 | ✅ | ✅ |
-| 빠른 신청 `#edQuickSuupNo`, `#btn_save_quick` | 공통 | ✅ | ✅ |
-| 학점 요약 `#edMinHakjeom` `#edMaxHakjeom` `#edSincheongHakjeom` | 공통 | ✅ | ✅ |
+| 버튼 "수강취소" (팁은 묶음: 열 "수강취소") | 신청내역 | ✅ | ✅ |
+| 빠른 신청 `#edQuickSuupNo`, `#btn_save_quick` (팁은 묶음 `.quick-area`) | 공통 | ✅ | ✅ |
+| 학점 요약 `#edMinHakjeom` `#edMaxHakjeom` `#edSincheongHakjeom` (팁은 묶음 `.hakjeom-area`, 영어등급 칸 포함. 칸이 `disabled`라 core CSS로 클릭을 부모에 넘김) | 공통 | ✅ | ✅ |
 | 숨김 칸 `#gdMain td.hidden-type` | 수강신청 | ✅ | ✅ |
 | 열 "수강신청" (가짜 [신청]을 넣는 칸) — 2026-10-14 | 희망수업 | ✅ | ✅ |
 | [신청]을 감싼 `span.btn_common_wrap` — 2026-10-14 | 희망수업 | ✅ | ❌ (목업은 input만) |
@@ -53,7 +53,7 @@
 | 과목구분 `div:has(> .sgsg-season > input[name=strIlbanCommonGb])` (라디오 4개를 감싼 div. `.sgsg-season`은 라디오와 글자를 감싼 span. 어느 라디오·글자를 눌러도 팁 하나가 뜸) | 수강신청 | ✅ (저장본) | ✅ |
 | 전체 선택 `#chooseAll` | 희망수업 | ✅ | ✅ |
 | 과목 선택 `input[name=editBox]` | 희망수업 | ❓ (행 없음) | ✅ |
-| 과목 수·학점 합계 `#edGwamok` `#edHakjeom` | 희망수업 | ✅ | ✅ |
+| 과목 수·학점 합계 `#edGwamok` `#edHakjeom` (팁은 묶음 `li:has(> #edGwamok)`, 같은 줄에 시간표보기 버튼 있음) | 희망수업 | ✅ | ✅ |
 | 최종 확인 안내 `ul:has(#edGwamok) > li:last-child` (과목 수 칸이 있는 툴바의 마지막 줄) | 희망수업 | ✅ (저장본) | ✅ |
 | 조회 결과 없음 `#gdMain td.emptyDataList` | 수강편람·기본수업·수강신청·희망수업·신청내역 | ✅ | ✅ |
 
