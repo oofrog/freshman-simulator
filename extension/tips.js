@@ -318,7 +318,7 @@ SG.tips = [
   {
     id: 'hope.notice',
     screen: '희망수업',
-    find: { selector: 'ul.w-20 > li:nth-child(3)' },
+    find: { selector: 'ul:has(#edGwamok) > li:last-child' },
     title: '신청 전 최종 확인',
     text: '희망수업에 담은 뒤에도 수업시간이나 이수제한이 바뀔 수 있어요. 실제 신청 직전에 다시 확인해 주세요.',
     source: 'Figma H13 | 실제 화면 표시 확인',
@@ -414,7 +414,7 @@ SG.tips = [
   {
     id: 'apply.scope',
     screen: '수강신청',
-    find: { selector: 'div:has(> .sgsg-season)' }, // 묶음: 전체·공통과목·학과과목·핵심/특화 라디오 전체
+    find: { selector: 'div:has(> .sgsg-season > input[name=strIlbanCommonGb])' }, // 묶음: 전체·공통과목·학과과목·핵심/특화 라디오 전체
     title: '공통과목 학과과목',
     text: '공통과목과 학과과목 등 검색 범위를 고르는 항목이에요. 졸업학점 인정 여부는 본인의 교육과정에서 따로 확인해 주세요.',
     source: 'Figma A07 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
@@ -436,23 +436,6 @@ SG.tips = [
     title: '초기화',
     text: '검색 조건을 기본 상태로 되돌리는 버튼이에요. 신청된 과목을 취소하는 버튼과는 달라요.',
     source: 'Figma A04 | 실제 화면 표시 확인',
-  },
-  {
-    id: 'apply.detail',
-    screen: '수강신청',
-    find: { button: '▼상세조회' },
-    title: '상세조회',
-    text: '추가 검색 조건을 확인하는 버튼이에요. 특수강좌 등 필요한 조건을 함께 확인해 주세요.',
-    source: 'Figma A05 | ERICA 수강신청 프로그램 이용방법',
-  },
-  // 파랑: 생략 검토 중. 결과 없음 칸은 첫 열 칸으로도 잡혀서 열 팁(apply.apply 등)보다 위에 둔다
-  {
-    id: 'apply.empty',
-    screen: '수강신청',
-    find: { selector: '#gdMain td.emptyDataList' },
-    title: '조회 결과 없음',
-    text: '아직 조회하지 않았거나 조건에 맞는 결과가 없다는 안내예요. 먼저 조회하고 검색 조건을 다시 확인해 주세요.',
-    source: 'Figma A12 | 실제 화면 표시 확인',
   },
   {
     id: 'apply.apply',
@@ -477,6 +460,15 @@ SG.tips = [
     title: '희망신청 열',
     text: '관심 수업을 희망수업 목록에 담는 열이에요. 좌석 예약이나 실제 수강신청 완료를 의미하지 않아요.',
     source: 'Figma A11 | ERICA 수강신청 프로그램 이용방법',
+  },
+  // 파랑: 생략 검토 중
+  {
+    id: 'apply.empty',
+    screen: '수강신청',
+    find: { selector: '#gdMain td.emptyDataList' },
+    title: '조회 결과 없음',
+    text: '아직 조회하지 않았거나 조건에 맞는 결과가 없다는 안내예요. 먼저 조회하고 검색 조건을 다시 확인해 주세요.',
+    source: 'Figma A12 | 실제 화면 표시 확인',
   },
   // [보류] 스크롤 막대만 가리킬 요소가 없음 (.grid-wrap은 표 전체를 감싸서 팁 없는 칸을 누르면 이 팁이 뜸)
   {
