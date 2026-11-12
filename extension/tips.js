@@ -21,73 +21,8 @@
 //   빨강(정보 모름·보충 필요)과 연결할 화면 요소를 아직 모르는 항목은 위에 "[보류]" 주석을 단다 — 확인되면 주석만 지운다.
 //   find: {} 는 연결할 요소가 없어 화면에서 뜨지 않는 팁.
 SG.tips = [
-  // ---------- 공통: 위쪽 바·왼쪽 메뉴 (Figma 01) ----------
-  {
-    id: 'common.menu.pyunram',
-    screen: '공통',
-    find: { menu: '수강편람' },
-    title: '수강편람',
-    text: '개설 수업을 조건별로 찾아보는 메뉴예요. 조회한 수업이 자동으로 신청되는 것은 아니에요.',
-    source: 'Figma N01 | ERICA 수강신청 프로그램 이용방법',
-  },
-  // 파랑: 생략 검토 중
-  {
-    id: 'common.menu.guide',
-    screen: '공통',
-    find: { menu: '수강안내' },
-    title: '수강안내',
-    text: '해당 학기의 신청 일정과 유의사항을 확인하는 메뉴예요. 신청 전에 ERICA 안내를 확인해 주세요.',
-    source: 'Figma N02 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.basic',
-    screen: '공통',
-    find: { menu: '기본수업' },
-    title: '기본수업',
-    text: '내 소속 학과·반의 기본수업을 모아 보는 메뉴예요. 실제 신청 여부는 [신청내역]에서 확인해 주세요.',
-    source: 'Figma N03 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.apply',
-    screen: '공통',
-    find: { menu: '수강신청' },
-    title: '수강신청',
-    text: '수업을 검색하고 실제 수강신청을 진행하는 메뉴예요. 본인의 신청 기간과 이수제한을 확인해 주세요.',
-    source: 'Figma N04 | ERICA 수강신청 프로그램 이용방법, ERICA 수강신청 이수제한 안내',
-  },
-  {
-    id: 'common.menu.hope',
-    screen: '공통',
-    find: { menu: '희망수업' },
-    title: '희망수업',
-    text: '관심 수업을 미리 담아 두는 메뉴예요. 담아 두기만 해서는 신청이 완료되지 않아요.',
-    source: 'Figma N05 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.done',
-    screen: '공통',
-    find: { menu: '신청내역' },
-    title: '신청내역',
-    text: '실제로 신청된 과목을 확인하는 메뉴예요. 신청 후에는 과목과 적용 이수구분을 확인해 주세요.',
-    source: 'Figma N06 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.graduation',
-    screen: '공통',
-    find: { menu: '졸업사정조회' },
-    title: '졸업사정조회',
-    text: '졸업요건별 이수 현황을 확인하는 메뉴예요. 학과별 별도 졸업요건도 함께 확인해 주세요.',
-    source: 'Figma N08 | ERICA 2026 졸업요건 사전확인 안내',
-  },
-  // 파랑: 생략 검토 중
-  {
-    id: 'common.menu.keyword',
-    screen: '공통',
-    find: { menu: '키워드검색' },
-    title: '키워드검색',
-    text: '키워드로 정보를 찾는 메뉴예요. 어떤 정보를 검색하는지는 연결 화면의 안내를 확인해 주세요.',
-    source: 'Figma N12 | 실제 화면 표시 확인',
-  },
+  // ---------- 공통: 위쪽 바 (Figma 01) ----------
+  // 위쪽 메뉴(#snb) 팁은 두지 않는다: 자유 팁에서도 직접 눌러 이동하는 요소(SG.tryable)라 팁이 뜨지 않는다 (#19)
   {
     id: 'common.quick',
     screen: '공통',
@@ -116,24 +51,6 @@ SG.tips = [
     title: '학년 반',
     text: '현재 로그인한 학생의 학년·반 정보예요. 수업 목록의 대상 학년·반이나 검색 조건과 구분해 주세요.',
     source: 'Figma N18 | 실제 화면 표시 확인',
-  },
-  // [보류] 빨강(정보 모름·보충 필요)
-  {
-    id: 'common.menu.increase',
-    screen: '공통',
-    find: { menu: '증원신청내역' },
-    title: '증원신청내역',
-    text: '제출한 증원 요청과 처리 결과를 확인하는 메뉴예요. 요청 제출과 승인 확정은 구분해 주세요.',
-    source: 'Figma N07 | 2026-2 ERICA 증원신청 공지, 실제 화면 표시 확인',
-  },
-  // [보류] 빨강(정보 모름·보충 필요)
-  {
-    id: 'common.menu.bachmaster',
-    screen: '공통',
-    find: { menu: '학석사공통신청' },
-    title: '학석사공통신청',
-    text: '학사·석사 공통교과목 신청 관련 메뉴예요. 이용 대상과 신청 조건은 해당 학기 안내에서 확인해 주세요.',
-    source: 'Figma N09 | 실제 화면 표시 확인',
   },
   // [보류] 빨강(정보 모름·보충 필요)
   {
