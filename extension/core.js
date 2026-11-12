@@ -111,14 +111,31 @@ window.SG = (() => {
     document.body.append(back);
     modalEl = back;
   });
-  // 마우스를 올린 요소에 점선 테두리 (자유 팁: 팁이 있는 요소만). null이면 지움.
-  // 화면 요소에 class 하나만 붙였다 떼므로 표를 다시 그려도 남는 것이 없다
-  let hovered = null;
+  // 마우스를 올린 요소에 얇은 테두리 + 오른쪽 위 "?" 배지 (자유 팁: 팁이 있는 요소만). null이면 지움.
+  // 화면 요소에는 class 하나만 붙였다 떼고, 배지는 확장 요소로 따로 띄우므로 표를 다시 그려도 남는 것이 없다
+  let hovered = null, badgeEl = null;
+  const placeBadge = () => {
+    const r = hovered.getBoundingClientRect();
+    badgeEl.style.left = Math.max(2, Math.min(r.right - 10, innerWidth - 20)) + scrollX + 'px';
+    badgeEl.style.top = Math.max(2, r.top - 7) + scrollY + 'px';
+  };
+  const onScroll = () => hovered && placeBadge(); // 표 가로 스크롤 등으로 요소가 움직여도 배지를 따라 붙인다
   const hover = target => {
     if (hovered === target) return;
     hovered?.classList.remove('sg-hover');
     hovered = target || null;
     hovered?.classList.add('sg-hover');
+    if (!hovered) {
+      badgeEl?.remove(); badgeEl = null;
+      removeEventListener('scroll', onScroll, true);
+      return;
+    }
+    if (!badgeEl) {
+      badgeEl = el('span', { className: 'sg-badge', textContent: '?' });
+      document.body.append(badgeEl);
+      addEventListener('scroll', onScroll, true);
+    }
+    placeBadge();
   };
   const clear = () => { unhighlight(); hover(null); bubbleEl?.remove(); modalEl?.remove(); };
 
@@ -185,15 +202,6 @@ window.SG = (() => {
         el('button', { className: 'sg-btn' + (name === current ? ' on' : ''), textContent: m.label, onclick: () => name === current ? stop() : start(name) })),
       el('button', { className: 'sg-btn off', textContent: '끄기', onclick: () => toggle() }));
   };
-  // 팁 있는 요소 위의 커서: 화살표 + 주황 물음표 (기본 help 커서보다 조금 크게). 2x 화면용 이미지도 같이 준다
-  const helpSvg = px => 'url("data:image/svg+xml,' + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 32 32">` +
-    '<path d="M3 2v20l5-4.5 3.5 7.5 3-1.3-3.5-7.4H17.5z" fill="#111" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>' +
-    '<circle cx="24" cy="23" r="7" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/>' +
-    '<path d="M21.6 20.8a2.4 2.4 0 1 1 3.4 2.2c-.7.35-1 .8-1 1.6" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/>' +
-    '<circle cx="24" cy="27.4" r="1.1" fill="#fff"/></svg>') + '")';
-  const HELP_CURSOR = `${helpSvg(36)} 3 2, help`;
-  const HELP_CURSOR_2X = `image-set(${helpSvg(36)} 1x, ${helpSvg(72)} 2x) 3 2, help`;
   const CSS = `
     [data-sg]{font:13px/1.5 sans-serif;color:#111;box-sizing:border-box}
     .sg-panel{position:fixed;top:12px;right:12px;z-index:2147483646;background:#fff;border:2px solid #2563eb;border-radius:10px;padding:10px;width:200px;box-shadow:0 4px 16px #0003;display:flex;flex-direction:column;gap:6px}
@@ -207,10 +215,11 @@ window.SG = (() => {
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
     .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
-    .sg-hover{outline:2px dashed #f59e0b !important;outline-offset:-2px !important}
+    .sg-hover{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
+    .sg-badge{position:absolute;z-index:2147483645;width:16px;height:16px;border-radius:50%;background:#f59e0b;color:#fff;font:bold 11px/16px sans-serif;text-align:center;pointer-events:none;box-shadow:0 1px 3px #0005}
     html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
-    html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:${HELP_CURSOR} !important;cursor:${HELP_CURSOR_2X} !important}`;
-  // 마지막 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 물음표 커서를 같이 준다
+    html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:help !important}`;
+  // 마지막 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 도움말 커서(운영체제 기본)를 같이 준다
 
   function toggle() {
     if (ui) {
