@@ -191,7 +191,11 @@ window.SG = (() => {
   // :hover 규칙은 절대 맞지 않는 :not(*)로 바꿔 두었다가 끌 때 원래대로 되돌린다.
   // mousemove·pointermove는 막지 않는다: 활동 감지(자동 로그아웃 연장) 스크립트가 쓸 수 있어서
   const HOVER_EVENTS = ['mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave'];
-  const stopHover = e => { if (!e.target.closest?.('[data-sg]')) e.stopPropagation(); };
+  // 마우스가 올라간 요소가 직접 눌러 보는 요소(tryable)이면 html에 sg-try를 붙여 손가락 커서를 준다 (판정은 tryable 한 곳에서만)
+  const stopHover = e => {
+    if (e.type === 'mouseover') document.documentElement.classList.toggle('sg-try', tryable(e.target));
+    if (!e.target.closest?.('[data-sg]')) e.stopPropagation();
+  };
   let muted = null; // [규칙, 원래 선택자] 목록
   const walk = list => {
     for (const r of list) {
@@ -216,6 +220,7 @@ window.SG = (() => {
     (on ? addEventListener : removeEventListener)('load', onCssLoad, true);
     if (on) { muted = []; muteAll(); lateCss.observe(document.head, { childList: true }); return; }
     lateCss.disconnect();
+    document.documentElement.classList.remove('sg-try');
     muted.forEach(([r, s]) => { r.selectorText = s; });
     muted = null;
   };
@@ -289,15 +294,16 @@ window.SG = (() => {
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
     .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
-    input:disabled:not([type=button]):not([type=submit]),select:disabled,textarea:disabled{pointer-events:none}
     .sg-hover,.sg-lit{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
     .sg-badge{position:absolute;z-index:2147483645;width:16px;height:16px;border-radius:50%;background:#f59e0b;color:#fff;font:bold 11px/16px sans-serif;text-align:center;pointer-events:none;box-shadow:0 1px 3px #0005}
     html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
     html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:help !important}
-    html.sg-quiet #snb a[title],html.sg-quiet #snb a[title] *,html.sg-quiet #pagingPanel a,html.sg-quiet #pagingPanel a *,html.sg-quiet #btn_Detail,html.sg-quiet #btn_General{cursor:pointer !important}`;
+    html.sg-quiet.sg-try :not([data-sg],[data-sg] *){cursor:pointer !important}
+    html.sg-quiet :is(input,select,textarea,button):disabled{pointer-events:none}`;
   // help 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 도움말 커서(운영체제 기본)를 같이 준다
-  // pointer-events 줄: disabled 칸은 클릭 이벤트가 아예 안 와서 팁이 안 뜬다 → 클릭을 부모로 넘겨 묶음 팁(.hakjeom-area 등)이 받게 한다
-  // 마지막 줄: 자유 팁(sg-quiet)에서도 직접 눌러 보는 요소(tryable)는 손가락 커서
+  // sg-try 줄: 직접 눌러 보는 요소 위에서는 손가락 커서 (stopHover가 sg-try를 붙였다 뗀다. 커서는 마우스 밑 요소 것만 보이므로 전체에 줘도 된다)
+  // 마지막 줄: disabled 칸·버튼은 클릭 이벤트가 아예 안 와서 팁이 안 뜬다 → 클릭을 부모로 넘겨 묶음 팁(.hakjeom-area, 열 팁 등)이 받게 한다.
+  //   자유 팁(sg-quiet)에서만 적용한다. 실전 재현 등은 실제 화면과 같아야 해서
 
   function toggle() {
     if (ui) {

@@ -57,7 +57,7 @@ SG.register('tutorial', {
 | `rows()`, `cell(행, '열 이름')`, `headers()` | 과목 표 읽기 (숨김 칸 자동 처리) |
 | `findButton(범위, '신청')`, `buttons(범위)`, `label(el)` | 보이는 버튼 찾기 |
 | `goMenu('희망수업')`, `waitFor(조건함수)` | 화면 이동과 대기 |
-| `matchTip(el)`, `tipEl(tip)` | 요소 → 팁, 팁 → 요소 |
+| `matchTip(el)`, `tipEl(tip)`, `tryable(el)` | 요소 → 팁, 팁 → 요소. `tryable`: 직접 눌러 보는 요소(위쪽 메뉴·페이지 링크·상세조회↔일반조회)인지. 이런 요소는 `matchTip`이 팁 없음(null)으로 본다 |
 | `highlight(el, thin)`, `unhighlight()`, `bubble(el, {title, text, buttons})`, `modal({title, text, buttons})`, `clear()` | 오버레이. `highlight`는 기본 굵은 테두리(튜토리얼), `thin`이면 호버와 같은 얇은 테두리 + "?" 배지. `bubble`·`modal`은 누른 버튼 글자를 Promise로 돌려줌. `clear()`는 호버 테두리는 남김 |
-| `hover(el)`, `quiet(on)` | 자유 팁용. `hover`: 마우스를 올린 요소에 얇은 테두리 + "?" 배지 (`null`이면 지움). `quiet`: 페이지 자체 `:hover`·마우스 올림 이벤트를 끄고 커서를 통일 (켠 모드의 `stop()`에서 `quiet(false)`) |
+| `hover(el)`, `quiet(on)` | 자유 팁용. `hover`: 마우스를 올린 요소에 얇은 테두리 + "?" 배지 (`null`이면 지움). `quiet`: 페이지 자체 `:hover`·마우스 올림 이벤트를 끄고 커서를 통일 (직접 눌러 보는 요소는 손가락 커서). 켜져 있는 동안 disabled 칸·버튼은 클릭을 부모로 넘겨 묶음·열 팁이 받는다 (켠 모드의 `stop()`에서 `quiet(false)`) |
 | `el(tag, props, ...children)` | 확장용 요소 만들기 (클릭 차단에서 빠지고, 이벤트를 페이지로 올려 보내지 않음) |
