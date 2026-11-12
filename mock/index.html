@@ -171,9 +171,9 @@ const searchBox = (page, q = query[page] || {}) => `<div class="search-box" data
   </div>
   <div class="search-row">
   <label class="first-filter">이수구분 <select id="cbIsuGb" name="type">${opts(['전체', '교양필수', '교양선택', '전공기초', '전공핵심'], q.type)}</select></label>
-  <label class="code-filter">학수번호 <input id="cbHaksu" name="code" style="width:128px" value="${escapeAttr(q.code)}"></label>
-  <label class="old-filter">(변경전)교과목명 <input id="cbChgGwamokNm" name="old" style="width:146px" value="${escapeAttr(q.old)}"></label>
-  <label class="name-filter">교과목명 <input id="cbGwamokNm" name="name" style="width:146px" value="${escapeAttr(q.name)}"></label>
+  <label class="code-filter">학수번호 <input id="cbHaksu" type="text" name="code" style="width:128px" value="${escapeAttr(q.code)}"></label>
+  <label class="old-filter">(변경전)교과목명 <input id="cbChgGwamokNm" type="text" name="old" style="width:146px" value="${escapeAttr(q.old)}"></label>
+  <label class="name-filter">교과목명 <input id="cbGwamokNm" type="text" name="name" style="width:146px" value="${escapeAttr(q.name)}"></label>
   <span class="btn_common_wrap"><input type="button" id="btn_Detail" value="▼ 상세조회" data-detail aria-controls="mock-search-detail" aria-expanded="${!!q.detail}"${q.detail ? ' style="display:none"' : ''}></span>
   <span class="btn_common_wrap"><input type="button" id="btn_General" value="▲ 일반조회" data-detail aria-controls="mock-search-detail" aria-expanded="${!!q.detail}"${q.detail ? '' : ' style="display:none"'}></span>
   <div class="search-actions">
@@ -272,6 +272,7 @@ addEventListener('scroll', positionSubmenu);
 addEventListener('resize', positionSubmenu);
 addEventListener('hashchange', () => {
   setOpenMenu(null);
+  pageNo = 1; // 화면을 옮기면 1페이지부터
   render();
 });
 
@@ -438,8 +439,9 @@ const ACT = {
   dongil: () => alert('동일/대치 교과목으로 지정된 이수 과목이 없습니다.'),
   todo: () => alert('목업에서는 아직 지원하지 않는 기능입니다.'),
   page: (_, el) => { pageNo = Number(el.dataset.page); },
-  reset: (_, el) => { const page = el.closest('.search-box').dataset.page; delete query[page]; delete found[page]; },
+  reset: (_, el) => { pageNo = 1; const page = el.closest('.search-box').dataset.page; delete query[page]; delete found[page]; },
   search: (_, el) => {
+    pageNo = 1; // 새로 조회하면 1페이지부터
     const box = el.closest('.search-box'), f = n => (box.querySelector(`[name=${n}]:checked`) || box.querySelector(`[name=${n}]`)).value.trim();
     const special = [...box.querySelectorAll('[name=special]:checked')].map(input => input.value);
     const gubun = box.dataset.page === 'apply' ? courseGroups[Number(f('strIlbanCommonGb'))] : f('gubun');

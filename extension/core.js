@@ -224,17 +224,20 @@ window.SG = (() => {
   // 켜져 있는 동안 페이지 버튼은 기본적으로 전부 막는다. 모드가 allow(el)로 예외를 줄 수 있다.
   // 직접 눌러 보는 요소: 설명보다 눌러 보는 게 빠른 것. 자유 팁에서도 누를 수 있고 팁이 뜨지 않는다 (위쪽 메뉴, 표 아래 페이지 링크, 상세조회↔일반조회)
   const TRY = ['▼상세조회', '▲일반조회'];
-  const tryable = e => !!e?.closest?.('#snb a[title], #pagingPanel a') || (!!e?.matches?.('input[type=button], button') && TRY.includes(norm(label(e))));
+  // 누른 요소가 버튼 안쪽 글자·아이콘이어도 버튼으로 본다
+  const buttonOf = e => e?.closest?.('input[type=button], button');
+  const tryable = e => !!e?.closest?.('#snb a[title], #pagingPanel a') || TRY.includes(norm(label(buttonOf(e) || {})));
   // 모드가 없을 때는 위 요소 + 조회·입력칸·선택칸만 허용 (서버 상태를 바꾸지 않는 것만)
   const SAFE = ['조회', '초기화'];
   const CHOICE = 'input[type=radio], input[type=checkbox]'; // 라디오·체크박스 (과목구분, 희망수업 과목 선택 등)
-  const idleAllow = e => tryable(e) || e.matches(`input[type=text], select, option, ${CHOICE}`) ||
-    (e.matches('label') && !!e.control?.matches(CHOICE)) ||
-    (e.matches('input[type=button], button') && SAFE.includes(norm(label(e))));
+  const idleAllow = e => tryable(e) || e.matches(`input[type=text], input:not([type]), select, option, ${CHOICE}`) ||
+    !!e.closest('label')?.control?.matches(CHOICE) ||
+    SAFE.includes(norm(label(buttonOf(e) || {})));
   const guard = e => {
     const m = modes[current];
-    // Esc: 모드가 escape()를 정의하면 그것만 부르고(예: 실전 재현은 메시지만 닫음), 없으면 모드 종료. 포커스가 확장 요소 안이어도 같다
-    if (e.type === 'keydown' && e.key === 'Escape') return m?.escape ? m.escape() : stop();
+    // Esc: 모드가 escape()를 정의하면 그것만 부르고(예: 실전 재현은 메시지만 닫음), 없으면 모드 종료.
+    // 모드가 없을 때는 떠 있는 모달(시작 실패 안내 등)만 닫는다. 포커스가 확장 요소 안이어도 같다
+    if (e.type === 'keydown' && e.key === 'Escape') return m?.escape ? m.escape() : current ? stop() : clear();
     if (bypass || e.target.closest?.('[data-sg]')) return;
     if (e.type === 'keydown' && e.key !== 'Enter') return; // 글자 입력은 허용, Enter 제출만 막음
     if (m ? m.allow?.(e.target, e) : idleAllow(e.target)) return;
@@ -246,13 +249,17 @@ window.SG = (() => {
   // ---------- 모드 · 패널 ----------
   // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()? })
   const register = (name, mode) => { modes[name] = mode; ui && renderPanel(); };
+  let runs = 0; // 시작할 때마다 1씩 늘린다. 늦게 실패한 이전 시작이 지금 켠 모드를 끄지 않게 한다
   const start = async name => {
     stop();
+    const run = ++runs;
     current = name;
     renderPanel();
     try { await modes[name].start?.(); } catch (err) {
       console.warn(err);
-      if (current === name) stop(); // 켜진 채 남으면 페이지 클릭이 계속 막힌다. stop()이 모달을 지우므로 먼저 부른다
+      // 그사이 모드를 끄거나 다시 켰거나 확장을 껐으면 아무것도 하지 않는다
+      if (run !== runs || current !== name || !ui) return;
+      stop(); // 켜진 채 남으면 페이지 클릭이 계속 막힌다. stop()이 모달을 지우므로 먼저 부른다
       modal({ title: '시작할 수 없어요', text: String(err.message || err) });
     }
   };
