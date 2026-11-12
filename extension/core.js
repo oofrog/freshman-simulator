@@ -36,9 +36,10 @@ window.SG = (() => {
 
   // ---------- 팁 찾기 (팁 데이터 형식: tips.js) ----------
   const tipsHere = (s = screen()) => (SG.tips || []).filter(t => t.screen === '공통' || t.screen === s);
-  // 누른·올린 요소(또는 그 조상)에 해당하는 팁 → { tip, el }.
+  // 누른·올린 요소(또는 그 조상)에 해당하는 팁 → { tip, el }. 직접 눌러 보는 요소(tryable)는 팁 없음으로 친다.
   // 자유 팁에서는 마우스를 올릴 때마다 불리므로 화면 이름·표·머리글은 한 번만, 칸의 열 이름은 칸마다 한 번만 읽는다
   const matchTip = target => {
+    if (tryable(target)) return null;
     const tips = tipsHere(), g = grid();
     let hs;
     const columnOf = c => {
@@ -221,10 +222,13 @@ window.SG = (() => {
 
   // ---------- 실제 클릭 차단 ----------
   // 켜져 있는 동안 페이지 버튼은 기본적으로 전부 막는다. 모드가 allow(el)로 예외를 줄 수 있다.
-  // 모드가 없을 때는 메뉴 이동·조회·페이지 이동·입력칸·선택칸만 허용 (서버 상태를 바꾸지 않는 것만)
-  const SAFE = ['조회', '초기화', '▼상세조회', '▲일반조회'];
+  // 직접 눌러 보는 요소: 설명보다 눌러 보는 게 빠른 것. 자유 팁에서도 누를 수 있고 팁이 뜨지 않는다 (위쪽 메뉴, 상세조회↔일반조회)
+  const TRY = ['▼상세조회', '▲일반조회'];
+  const tryable = e => !!e?.closest?.('#snb a[title]') || (!!e?.matches?.('input[type=button], button') && TRY.includes(norm(label(e))));
+  // 모드가 없을 때는 위 요소 + 조회·페이지 이동·입력칸·선택칸만 허용 (서버 상태를 바꾸지 않는 것만)
+  const SAFE = ['조회', '초기화'];
   const CHOICE = 'input[type=radio], input[type=checkbox]'; // 라디오·체크박스 (과목구분, 희망수업 과목 선택 등)
-  const idleAllow = e => !!e.closest('#snb a[title], #pagingPanel a') || e.matches(`input[type=text], select, option, ${CHOICE}`) ||
+  const idleAllow = e => tryable(e) || !!e.closest('#pagingPanel a') || e.matches(`input[type=text], select, option, ${CHOICE}`) ||
     (e.matches('label') && !!e.control?.matches(CHOICE)) ||
     (e.matches('input[type=button], button') && SAFE.includes(norm(label(e))));
   const guard = e => {
@@ -282,9 +286,11 @@ window.SG = (() => {
     .sg-hover,.sg-lit{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
     .sg-badge{position:absolute;z-index:2147483645;width:16px;height:16px;border-radius:50%;background:#f59e0b;color:#fff;font:bold 11px/16px sans-serif;text-align:center;pointer-events:none;box-shadow:0 1px 3px #0005}
     html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
-    html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:help !important}`;
-  // 마지막 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 도움말 커서(운영체제 기본)를 같이 준다
-  // 첫 줄: disabled 칸은 클릭 이벤트가 아예 안 와서 팁이 안 뜬다 → 클릭을 부모로 넘겨 묶음 팁(.hakjeom-area 등)이 받게 한다
+    html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:help !important}
+    html.sg-quiet #snb a[title],html.sg-quiet #snb a[title] *,html.sg-quiet #btn_Detail,html.sg-quiet #btn_General{cursor:pointer !important}`;
+  // help 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 도움말 커서(운영체제 기본)를 같이 준다
+  // pointer-events 줄: disabled 칸은 클릭 이벤트가 아예 안 와서 팁이 안 뜬다 → 클릭을 부모로 넘겨 묶음 팁(.hakjeom-area 등)이 받게 한다
+  // 마지막 줄: 자유 팁(sg-quiet)에서도 직접 눌러 보는 요소(tryable)는 손가락 커서
 
   function toggle() {
     if (ui) {
@@ -305,6 +311,6 @@ window.SG = (() => {
   return {
     register, start, stop, toggle, get mode() { return current; },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
-    matchTip, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, clear, el,
+    matchTip, tryable, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, clear, el,
   };
 })();
