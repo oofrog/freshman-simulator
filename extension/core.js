@@ -75,15 +75,18 @@ window.SG = (() => {
     return e;
   };
   let lit = null, bubbleEl = null, modalEl = null;
-  const highlight = target => {
+  // 강조 테두리. thin이면 호버 테두리(.sg-hover)와 같은 굵기 (자유 팁에서 누른 요소), 아니면 굵게 (튜토리얼 단계)
+  const highlight = (target, thin = false) => {
     unhighlight();
     if (!target) return;
+    if (thin) { target.classList.add('sg-lit'); lit = [target]; return; }
     lit = [target, target.style.outline, target.style.outlineOffset];
     target.style.outline = '3px solid #f59e0b';
     target.style.outlineOffset = '2px';
   };
   const unhighlight = () => {
-    if (lit) [lit[0].style.outline, lit[0].style.outlineOffset] = [lit[1], lit[2]];
+    if (lit?.length === 1) lit[0].classList.remove('sg-lit');
+    else if (lit) [lit[0].style.outline, lit[0].style.outlineOffset] = [lit[1], lit[2]];
     lit = null;
   };
   // 말풍선: target 근처에 표시. buttons를 주면 누른 버튼 글자로 resolve
@@ -215,7 +218,7 @@ window.SG = (() => {
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
     .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
-    .sg-hover{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
+    .sg-hover,.sg-lit{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
     .sg-badge{position:absolute;z-index:2147483645;width:16px;height:16px;border-radius:50%;background:#f59e0b;color:#fff;font:bold 11px/16px sans-serif;text-align:center;pointer-events:none;box-shadow:0 1px 3px #0005}
     html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
     html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:help !important}`;
