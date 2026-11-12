@@ -414,7 +414,7 @@ SG.tips = [
   {
     id: 'apply.scope',
     screen: '수강신청',
-    find: { selector: '.sgsg-season' },
+    find: { selector: 'div:has(> .sgsg-season)' }, // 묶음: 전체·공통과목·학과과목·핵심/특화 라디오 전체
     title: '공통과목 학과과목',
     text: '공통과목과 학과과목 등 검색 범위를 고르는 항목이에요. 졸업학점 인정 여부는 본인의 교육과정에서 따로 확인해 주세요.',
     source: 'Figma A07 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',

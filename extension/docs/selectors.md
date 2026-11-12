@@ -50,7 +50,7 @@
 | 버튼 "신청과목시간표확인(고지서출력)" | 신청내역 | ✅ (저장본) | ✅ |
 | 동일/대치 교과목 확인 `#btn_dongil` | 기본수업 | ✅ | ✅ |
 | 검색 영역 `.search-box` — 감싸는 영역이라 자유 팁에서 잡을 수 없어 팁 삭제 (#16) | 수강편람·수강신청 | ✅ | ✅ |
-| 과목구분 `.sgsg-season` (라디오 `input[name=strIlbanCommonGb]`와 글자를 감싼 span. 글자를 눌러도 팁이 뜸) | 수강신청 | ✅ (저장본) | ✅ |
+| 과목구분 `div:has(> .sgsg-season)` (라디오 4개를 감싼 div. `.sgsg-season`은 라디오 `input[name=strIlbanCommonGb]`와 글자를 감싼 span. 어느 라디오·글자를 눌러도 팁 하나가 뜸) | 수강신청 | ✅ (저장본) | ✅ |
 | 전체 선택 `#chooseAll` | 희망수업 | ✅ | ✅ |
 | 과목 선택 `input[name=editBox]` | 희망수업 | ❓ (행 없음) | ✅ |
 | 과목 수·학점 합계 `#edGwamok` `#edHakjeom` | 희망수업 | ✅ | ✅ |
