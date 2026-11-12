@@ -19,7 +19,7 @@
       removeEventListener('mouseout', onOut, true);
       SG.quiet(false);
     },
-    // 위쪽 메뉴·상세조회처럼 직접 눌러 보는 요소(SG.tryable)는 실제로 동작하게 둔다. 화면이 바뀌므로 떠 있던 말풍선은 닫는다
+    // 위쪽 메뉴·페이지 링크·상세조회처럼 직접 눌러 보는 요소(SG.tryable)는 실제로 동작하게 둔다. 화면이 바뀌므로 떠 있던 말풍선은 닫는다
     allow(el, e) {
       if (!SG.tryable(el)) return false;
       if (e.type === 'click') SG.clear();
