@@ -22,7 +22,7 @@
     blocked(target) {
       const hit = SG.matchTip(target);
       if (!hit) return SG.clear(); // 팁 없는 곳: 떠 있던 말풍선만 닫는다
-      SG.highlight(hit.el, true); // 호버와 같은 굵기
+      SG.highlight(hit.el, true); // 호버와 같은 모양 (얇은 테두리 + 배지)
       SG.bubble(hit.el, { title: hit.tip.title, text: hit.tip.text });
     },
   });

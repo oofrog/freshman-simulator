@@ -74,20 +74,37 @@ window.SG = (() => {
     e.append(...kids);
     return e;
   };
-  let lit = null, bubbleEl = null, modalEl = null;
-  // 강조 테두리. thin이면 호버 테두리(.sg-hover)와 같은 굵기 (자유 팁에서 누른 요소), 아니면 굵게 (튜토리얼 단계)
+  let lit = null, bubbleEl = null, modalEl = null, hovered = null;
+  // 오른쪽 위 "?" 배지: 호버 중인 요소와 자유 팁에서 누른 요소에 붙인다. 확장 요소로 따로 띄우므로 표를 다시 그려도 남는 것이 없다
+  const badges = new Map(); // 화면 요소 → 배지
+  const placeBadges = () => badges.forEach((b, t) => {
+    const r = t.getBoundingClientRect();
+    b.style.left = Math.max(2, Math.min(r.right - 10, innerWidth - 20)) + scrollX + 'px';
+    b.style.top = Math.max(2, r.top - 7) + scrollY + 'px';
+  });
+  const syncBadges = () => {
+    const want = new Set([hovered, lit?.length === 1 && lit[0]].filter(Boolean));
+    badges.forEach((b, t) => { if (!want.has(t)) { b.remove(); badges.delete(t); } });
+    want.forEach(t => { if (!badges.has(t)) badges.set(t, document.body.appendChild(el('span', { className: 'sg-badge', textContent: '?' }))); });
+    // 표 가로 스크롤 등으로 요소가 움직여도 배지를 따라 붙인다
+    (badges.size ? addEventListener : removeEventListener)('scroll', placeBadges, true);
+    placeBadges();
+  };
+  // 강조 테두리. thin이면 호버와 같은 모양(얇은 테두리 + 배지, 자유 팁에서 누른 요소), 아니면 굵게 (튜토리얼 단계)
   const highlight = (target, thin = false) => {
     unhighlight();
     if (!target) return;
-    if (thin) { target.classList.add('sg-lit'); lit = [target]; return; }
+    if (thin) { target.classList.add('sg-lit'); lit = [target]; syncBadges(); return; }
     lit = [target, target.style.outline, target.style.outlineOffset];
     target.style.outline = '3px solid #f59e0b';
     target.style.outlineOffset = '2px';
   };
   const unhighlight = () => {
-    if (lit?.length === 1) lit[0].classList.remove('sg-lit');
+    const thin = lit?.length === 1;
+    if (thin) lit[0].classList.remove('sg-lit');
     else if (lit) [lit[0].style.outline, lit[0].style.outlineOffset] = [lit[1], lit[2]];
     lit = null;
+    if (thin) syncBadges();
   };
   // 말풍선: target 근처에 표시. buttons를 주면 누른 버튼 글자로 resolve
   const bubble = (target, { title = '', text = '', buttons: btns = [] }) => new Promise(done => {
@@ -115,30 +132,13 @@ window.SG = (() => {
     modalEl = back;
   });
   // 마우스를 올린 요소에 얇은 테두리 + 오른쪽 위 "?" 배지 (자유 팁: 팁이 있는 요소만). null이면 지움.
-  // 화면 요소에는 class 하나만 붙였다 떼고, 배지는 확장 요소로 따로 띄우므로 표를 다시 그려도 남는 것이 없다
-  let hovered = null, badgeEl = null;
-  const placeBadge = () => {
-    const r = hovered.getBoundingClientRect();
-    badgeEl.style.left = Math.max(2, Math.min(r.right - 10, innerWidth - 20)) + scrollX + 'px';
-    badgeEl.style.top = Math.max(2, r.top - 7) + scrollY + 'px';
-  };
-  const onScroll = () => hovered && placeBadge(); // 표 가로 스크롤 등으로 요소가 움직여도 배지를 따라 붙인다
+  // 화면 요소에는 class 하나만 붙였다 뗀다
   const hover = target => {
     if (hovered === target) return;
     hovered?.classList.remove('sg-hover');
     hovered = target || null;
     hovered?.classList.add('sg-hover');
-    if (!hovered) {
-      badgeEl?.remove(); badgeEl = null;
-      removeEventListener('scroll', onScroll, true);
-      return;
-    }
-    if (!badgeEl) {
-      badgeEl = el('span', { className: 'sg-badge', textContent: '?' });
-      document.body.append(badgeEl);
-      addEventListener('scroll', onScroll, true);
-    }
-    placeBadge();
+    syncBadges();
   };
   const clear = () => { unhighlight(); hover(null); bubbleEl?.remove(); modalEl?.remove(); };
 
