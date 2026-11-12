@@ -221,9 +221,11 @@ window.SG = (() => {
 
   // ---------- 실제 클릭 차단 ----------
   // 켜져 있는 동안 페이지 버튼은 기본적으로 전부 막는다. 모드가 allow(el)로 예외를 줄 수 있다.
-  // 모드가 없을 때는 메뉴 이동·조회·입력칸만 허용 (서버 상태를 바꾸지 않는 것만)
-  const SAFE = ['조회', '초기화', '▼상세조회'];
-  const idleAllow = e => !!e.closest('#snb a[title]') || e.matches('input[type=text], select, option') ||
+  // 모드가 없을 때는 메뉴 이동·조회·페이지 이동·입력칸·선택칸만 허용 (서버 상태를 바꾸지 않는 것만)
+  const SAFE = ['조회', '초기화', '▼상세조회', '▲일반조회'];
+  const CHOICE = 'input[type=radio], input[type=checkbox]'; // 라디오·체크박스 (과목구분, 희망수업 과목 선택 등)
+  const idleAllow = e => !!e.closest('#snb a[title], #pagingPanel a') || e.matches(`input[type=text], select, option, ${CHOICE}`) ||
+    (e.matches('label') && !!e.control?.matches(CHOICE)) ||
     (e.matches('input[type=button], button') && SAFE.includes(norm(label(e))));
   const guard = e => {
     const m = modes[current];
@@ -244,7 +246,11 @@ window.SG = (() => {
     stop();
     current = name;
     renderPanel();
-    try { await modes[name].start?.(); } catch (err) { console.warn(err); modal({ title: '시작할 수 없어요', text: String(err.message || err) }); }
+    try { await modes[name].start?.(); } catch (err) {
+      console.warn(err);
+      if (current === name) stop(); // 켜진 채 남으면 페이지 클릭이 계속 막힌다. stop()이 모달을 지우므로 먼저 부른다
+      modal({ title: '시작할 수 없어요', text: String(err.message || err) });
+    }
   };
   function stop() {
     if (!current) return;
