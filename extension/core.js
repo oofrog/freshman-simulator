@@ -209,7 +209,8 @@ window.SG = (() => {
     .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
     .sg-hover{outline:2px dashed #f59e0b !important;outline-offset:-2px !important}
     html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
-    html.sg-quiet .sg-hover.sg-hover{cursor:${HELP_CURSOR} !important;cursor:${HELP_CURSOR_2X} !important}`;
+    html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:${HELP_CURSOR} !important;cursor:${HELP_CURSOR_2X} !important}`;
+  // 마지막 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 물음표 커서를 같이 준다
 
   function toggle() {
     if (ui) {
