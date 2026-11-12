@@ -47,7 +47,7 @@ SG.register('tutorial', {
   escape() { ... },         // (선택) Esc를 눌렀을 때. 있으면 모드가 끝나지 않고 이것만 불림
 });
 ```
-- 확장이 켜져 있는 동안 페이지 클릭은 기본적으로 **전부 막힌다**. 모드가 꺼진 대기 상태에서는 메뉴 이동·조회·입력칸만 허용된다.
+- 확장이 켜져 있는 동안 페이지 클릭은 기본적으로 **전부 막힌다**. 모드가 꺼진 대기 상태에서는 메뉴 이동·조회(상세조회·일반조회 포함)·페이지 이동·입력칸·라디오·체크박스만 허용된다. 위쪽 메뉴, 표 아래 페이지 링크, 상세조회↔일반조회는 직접 눌러 보는 요소(`SG.tryable`)라 자유 팁 모드에서도 동작하고 팁이 뜨지 않는다.
 - 확장이 만든 요소(`SG.el(...)`로 만든 것)는 막히지 않는다. 그 안에서 일어난 클릭 등은 페이지(학교 코드)로 올라가지 않는다.
 
 ## core가 주는 함수 (`SG.`)
@@ -57,7 +57,7 @@ SG.register('tutorial', {
 | `rows()`, `cell(행, '열 이름')`, `headers()` | 과목 표 읽기 (숨김 칸 자동 처리) |
 | `findButton(범위, '신청')`, `buttons(범위)`, `label(el)` | 보이는 버튼 찾기 |
 | `goMenu('희망수업')`, `waitFor(조건함수)` | 화면 이동과 대기 |
-| `matchTip(el)`, `tipEl(tip)` | 요소 → 팁, 팁 → 요소 |
+| `matchTip(el)`, `tipEl(tip)`, `tryable(el)` | 요소 → 팁, 팁 → 요소. `tryable`: 직접 눌러 보는 요소(위쪽 메뉴·페이지 링크·상세조회↔일반조회)인지. 이런 요소는 `matchTip`이 팁 없음(null)으로 본다 |
 | `highlight(el, thin)`, `unhighlight()`, `bubble(el, {title, text, buttons})`, `modal({title, text, buttons})`, `clear()` | 오버레이. `highlight`는 기본 굵은 테두리(튜토리얼), `thin`이면 호버와 같은 얇은 테두리 + "?" 배지. `bubble`·`modal`은 누른 버튼 글자를 Promise로 돌려줌. `clear()`는 호버 테두리는 남김 |
-| `hover(el)`, `quiet(on)` | 자유 팁용. `hover`: 마우스를 올린 요소에 얇은 테두리 + "?" 배지 (`null`이면 지움). `quiet`: 페이지 자체 `:hover`·마우스 올림 이벤트를 끄고 커서를 통일 (켠 모드의 `stop()`에서 `quiet(false)`) |
+| `hover(el)`, `quiet(on)` | 자유 팁용. `hover`: 마우스를 올린 요소에 얇은 테두리 + "?" 배지 (`null`이면 지움). `quiet`: 페이지 자체 `:hover`·마우스 올림 이벤트를 끄고 커서를 통일 (직접 눌러 보는 요소는 손가락 커서). 켜져 있는 동안 disabled 칸·버튼은 클릭을 부모로 넘겨 묶음·열 팁이 받는다 (켠 모드의 `stop()`에서 `quiet(false)`) |
 | `el(tag, props, ...children)` | 확장용 요소 만들기 (클릭 차단에서 빠지고, 이벤트를 페이지로 올려 보내지 않음) |

@@ -4,7 +4,7 @@
 //           "사용자가 직접 눌러서 넘어가기"(allow로 해당 요소만 클릭 허용), 진행 표시(3/12 등)
 (() => {
   // 단계 = tips.js의 팁 id. 문구는 tips.js에만 둔다.
-  const STEPS = ['common.menu.hope', 'common.col.limit'];
+  const STEPS = ['common.credit', 'common.col.limit'];
 
   SG.register('tutorial', {
     label: '튜토리얼',
