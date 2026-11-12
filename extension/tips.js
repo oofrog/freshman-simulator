@@ -8,7 +8,6 @@
 //           { menu: '희망수업' }      왼쪽 메뉴
 //           { column: '희망인원' }    과목 표의 열 이름 (머리글과 그 열의 칸 모두)
 //           { selector: '#edQuickSuupNo' }  위로 안 되면 CSS 선택자 (docs/selectors.md에 추가)
-//           { selector: '.search-box', area: true }  area: 여러 요소를 감싸는 영역. 자유 팁(호버·클릭)에서는 잡지 않고 튜토리얼에서 강조할 때만 쓴다
 //   title, text: 말풍선 제목과 설명 (사실은 수강안내 원문과 대조, 모르는 건 쓰지 않는다)
 //   source: 근거 — 수강안내 항목 번호 등. 사실 확인은 김형인
 // }
@@ -175,14 +174,6 @@ SG.tips = [
     source: 'Figma N17 | 실제 화면 표시 확인',
   },
   // ---------- 수강편람 (Figma 02) — 표 열 설명은 다른 화면에도 같은 열이 있어 맨 아래 공통 열로 ----------
-  {
-    id: 'pyunram.filter',
-    screen: '수강편람',
-    find: { selector: '.search-box', area: true }, // 자유 팁에서는 반응 없음 (안쪽 입력칸에 올려도 영역 전체가 잡히지 않게)
-    title: '검색 필터',
-    text: '원하는 조건으로 수업을 찾을 수 있어요. 조건을 고른 뒤 [조회]를 눌러 주세요.',
-    source: 'Figma 01 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
-  },
   // 파랑: 생략 검토 중
   {
     id: 'pyunram.search',
@@ -444,14 +435,6 @@ SG.tips = [
     title: '공통과목 학과과목',
     text: '공통과목과 학과과목 등 검색 범위를 고르는 항목이에요. 졸업학점 인정 여부는 본인의 교육과정에서 따로 확인해 주세요.',
     source: 'Figma A07 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
-  },
-  {
-    id: 'apply.filter',
-    screen: '수강신청',
-    find: { selector: '.search-box', area: true }, // 자유 팁에서는 반응 없음 (안쪽 입력칸에 올려도 영역 전체가 잡히지 않게)
-    title: '검색 조건',
-    text: '조직·연도·학기·학년·과목명 등의 조건으로 수업을 찾을 수 있어요. ERICA와 원하는 학기가 맞는지 먼저 확인해 주세요.',
-    source: 'Figma A02 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
   },
   // 파랑: 생략 검토 중
   {

@@ -51,7 +51,6 @@ window.SG = (() => {
       const column = () => col !== undefined ? col : (col = columnOf(e));
       for (const tip of tips) {
         const f = tip.find;
-        if (f.area) continue; // 영역 팁은 자유 팁에서 잡지 않는다 (튜토리얼 강조용, tips.js 형식 설명 참고)
         if ((f.button && e.matches('input[type=button], input[type=submit], button') && norm(label(e)) === norm(f.button)) ||
           (f.menu && e.matches('#snb a[title]') && e.title === f.menu) ||
           (f.column && e.matches('th, td') && column() === norm(f.column)) ||
