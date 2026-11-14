@@ -165,11 +165,9 @@ window.SG = (() => {
   const renderPanel = () => {
     if (!ui) return;
     ui.panel.replaceChildren(
-      el('b', { textContent: '📘 수강신청 연습' }),
-      el('p', { textContent: '실제 신청은 되지 않습니다 · 모드를 골라 시작하세요' }),
+      el('b', { textContent: '📘 신입생 시뮬레이터' }),
       ...Object.entries(modes).map(([name, m]) =>
-        el('button', { className: 'sg-btn' + (name === current ? ' on' : ''), textContent: m.label, onclick: () => name === current ? stop() : start(name) })),
-      el('button', { className: 'sg-btn off', textContent: '끄기', onclick: () => off() }));
+        el('button', { className: 'sg-btn' + (name === current ? ' on' : ''), textContent: m.label, onclick: () => name === current ? stop() : start(name) })));
   };
   const renderBar = () => {
     if (!ui) return;
@@ -177,20 +175,20 @@ window.SG = (() => {
     ui.bar.hidden = !m || !!m.ownBar;
     if (ui.bar.hidden) return;
     ui.bar.replaceChildren(
-      el('span', { textContent: `${m.label} 중 · Esc로 끝내기` }),
+      el('span', { textContent: `${m.label} 중` }),
+      el('small', { textContent: 'Esc로 끝내기' }),
       el('button', { className: 'sg-btn', textContent: '끝내기', onclick: () => stop() }));
   };
   const CSS = `
     [data-sg]{font:13px/1.5 sans-serif;color:#111;box-sizing:border-box}
     .sg-panel{position:fixed;top:12px;right:12px;z-index:2147483646;background:#fff;border:2px solid #2563eb;border-radius:10px;padding:10px;width:200px;box-shadow:0 4px 16px #0003;display:flex;flex-direction:column;gap:6px}
     .sg-panel[hidden],.sg-bar[hidden]{display:none}
-    .sg-panel p{margin:0;color:#555;font-size:12px}
     .sg-bar{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:12px;white-space:nowrap;background:#111827;border-radius:8px;padding:8px 18px;box-shadow:0 4px 12px #0004}
     .sg-bar span{color:#fff;font-size:15px;font-weight:bold}
+    .sg-bar small{margin-left:-6px;color:#9ca3af;font-size:12px}
     .sg-bar .sg-btn{background:#fff;color:#111827;font-weight:bold}
     .sg-btn{all:unset;cursor:pointer;padding:5px 10px;border-radius:6px;background:#eef2ff;color:#1e3a8a;text-align:center;font:13px/1.5 sans-serif}
     .sg-btn.on{background:#2563eb;color:#fff}
-    .sg-btn.off{background:#f3f4f6;color:#444}
     .sg-bubble{position:absolute;z-index:2147483646;max-width:300px;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;box-shadow:0 4px 12px #0004}
     .sg-bubble *{color:#fff}
     .sg-bubble p,.sg-modal p{margin:4px 0;white-space:pre-line}
@@ -218,7 +216,7 @@ window.SG = (() => {
   }
 
   return {
-    register, start, stop, toggle, off, get mode() { return current; },
+    register, start, stop, toggle, get mode() { return current; },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
     matchTip, tipEl, highlight, unhighlight, bubble, modal, clear, el,
   };
