@@ -217,6 +217,7 @@
 
   SG.register('practice', {
     label: '실전 재현',
+    ownBar: true, // 카운트다운·[연습 끝내기] 바를 직접 그리므로 core 상태 바는 숨김
     async start() {
       if (SG.screen() !== '희망수업') {
         SG.goMenu('희망수업');

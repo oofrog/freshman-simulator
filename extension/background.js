@@ -1,4 +1,4 @@
-// 아이콘 클릭: 처음이면 파일 주입, 그다음부터는 켜기/끄기 (activeTab이라 사이트 주소 등록 불필요)
+// 아이콘 클릭: 처음이면 파일 주입, 그다음 SG.toggle()로 패널 열기·닫기 (activeTab이라 사이트 주소 등록 불필요)
 importScripts('files.js');
 
 chrome.action.onClicked.addListener(async tab => {

@@ -8,6 +8,13 @@ input, select, button { font: inherit; color: #4f535c; }
 .school-logo { width: 34px; height: 34px; }
 .school-name { width: 110px; color: #294e7b; font-size: 17px; font-weight: bold; }
 .right-area { gap: 14px; }
+/* 확장 아이콘 (목업 전용): 처음에는 고리가 퍼지며 눈에 띄고, 한 번 누르면 멈춤 */
+#dev-guide { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #2563eb; cursor: pointer; box-shadow: 0 1px 3px #0004; }
+#dev-guide:hover, #dev-guide:focus-visible { background: #1d4ed8; }
+#dev-guide svg { width: 20px; height: 20px; fill: white; }
+#dev-guide.is-new { animation: dev-guide-ring 1.6s ease-out infinite; }
+@keyframes dev-guide-ring { from { box-shadow: 0 0 0 0 #2563eb99; } to { box-shadow: 0 0 0 10px #2563eb00; } }
+@media (prefers-reduced-motion: reduce) { #dev-guide.is-new { animation: none; outline: 2px solid #f59e0b; outline-offset: 2px; } }
 #edQuickSuupNo { width: 86px; }
 #snb { display: flex; justify-content: space-between; align-items: center; gap: 12px; height: 41px; background: linear-gradient(#4c4f5b, #363945); overflow: auto hidden; scrollbar-width: none; white-space: nowrap; }
 #snb ul { display: flex; flex: none; list-style: none; margin: 0; padding: 0; }
