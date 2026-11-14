@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "신입생 시뮬레이터 (데모)",
+  "name": "신입생 시뮬레이터",
   "version": "0.2",
   "description": "수강신청 화면 위에서 튜토리얼·실전 재현·팁으로 연습합니다. 실제 신청은 되지 않습니다.",
   "permissions": ["activeTab", "scripting"],

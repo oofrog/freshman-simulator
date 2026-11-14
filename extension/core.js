@@ -165,7 +165,7 @@ window.SG = (() => {
   const renderPanel = () => {
     if (!ui) return;
     ui.panel.replaceChildren(
-      el('b', { textContent: '📘 신입생 시뮬레이터' }),
+      el('b', { textContent: '신입생 시뮬레이터' }),
       ...Object.entries(modes).map(([name, m]) =>
         el('button', { className: 'sg-btn' + (name === current ? ' on' : ''), textContent: m.label, onclick: () => name === current ? stop() : start(name) })));
   };

@@ -23,10 +23,6 @@
     <span><b>학번:</b> 2027000000</span>
     <span><b>학년(반):</b> 1(3)</span>
     <span><b>성명:</b> 새내기</span>
-    <!-- 브라우저 툴바의 확장 아이콘 대신: extension/files.js의 파일을 차례로 불러오고 아이콘 클릭과 같이 동작 (data-sg라 차단 대상에서 빠짐) -->
-    <button type="button" id="dev-guide" class="is-new" title="신입생 시뮬레이터 확장 (실제로는 브라우저 툴바의 확장 아이콘)" aria-label="신입생 시뮬레이터 확장 열기" data-sg>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-2 .9-2 2v3.8h1.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
-    </button>
   </div>
 </div>
 <div id="wrap">
@@ -41,6 +37,12 @@
   </div>
   <div id="content-wrap"><div id="hyinContents"></div></div>
 </div>
+<!-- 브라우저 툴바의 확장 아이콘 대신 (위쪽 가운데, 모드 중 상태 바가 같은 자리를 덮음): extension/files.js의 파일을 차례로 불러오고 아이콘 클릭과 같이 동작 (data-sg라 차단 대상에서 빠짐) -->
+<button type="button" id="dev-guide" class="is-new" title="신입생 시뮬레이터 확장 (실제로는 브라우저 툴바의 확장 아이콘)" data-sg>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-2 .9-2 2v3.8h1.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
+  확장 켜기
+</button>
+
 <!-- 첫 진입 안내: 이 브라우저에서 한 번 확인하면 다시 띄우지 않음 (data-sg라 확장이 켜져 있어도 닫을 수 있음) -->
 <dialog id="notice-dialog" class="course-dialog" data-kind="notice" aria-labelledby="notice-dialog-title" data-sg>
   <form method="dialog">
@@ -202,7 +204,7 @@ const gridHint = '<p class="grid-hint">수업번호 클릭시 <b>강의계획서
 // ---------- 화면 ----------
 const PAGES = [
   ['pyunram', '수강편람', () => searchBox('pyunram') + gridHint + grid(catalogCols, found.pyunram || [])],
-  ['guide', '수강안내', () => '<p>목업에서는 생략. 실제 수강안내 내용은 CLAUDE.md의 "학교 수강신청 규칙" 참고.</p>'],
+  ['guide', '수강안내', () => unsupported()], // 만들지 않음 (메뉴 순서 때문에 여기 둠)
   ['basic', '기본수업', () => `<div class="basic-toolbar">${gridHint}
     <input type="button" id="btn_dongil" value="동일/대치 교과목 확인" data-act="dongil"></div>
     <section class="basic-section" aria-labelledby="basic-heading"><h4 id="basic-heading">기본수업조회</h4>
@@ -238,10 +240,14 @@ const menuGroups = {
   volunteer: ['사회봉사수강신청안내', '오리엔테이션일정', '사회봉사수강신청', '사회봉사수강신청(자율)', '수강신청내역확인'],
   international: ['국제여름/겨울 신청안내', '국제여름/겨울 수강신청', '국제여름/겨울 신청내역'],
 };
-const unsupported = () => '<p>이 메뉴는 가짜 수강신청에서 제공하지 않습니다.</p>';
+// 만들지 않은 화면: 메뉴는 눌리지 않고, 마우스를 올리거나 포커스하면 안내만 뜬다 (주소로 직접 들어오면 같은 문구)
+const UNAVAILABLE = '실제 수강신청 사이트에서만 볼 수 있어요.';
+const unsupported = () => `<p>${UNAVAILABLE}</p>`;
+const unavailable = new Set(['guide', ...extraPages.map(([key]) => key)]);
 for (const [key, title] of extraPages) PAGES.push([key, title, unsupported]);
 document.getElementById('menu').innerHTML = PAGES.map(([key, title]) => {
   const group = menuGroups[key];
+  if (unavailable.has(key)) return `<li><a tabindex="0" aria-disabled="true" aria-describedby="menu-tip"${group ? '' : ` title="${title}"`} data-unavailable>${title}</a></li>`;
   if (!group) return `<li><a href="#!${key}" title="${title}">${title}</a></li>`;
   const links = group.map((label, i) => `<li><a href="#!${key}-${i}" title="${label}">${label}</a></li>`).join('');
   return `<li><a class="over-btn" role="button" tabindex="0" aria-expanded="false" aria-controls="submenu-${key}">${title}</a><div id="submenu-${key}" class="sub_category" hidden><div class="list_scroll"><div class="list"><ul>${links}</ul></div></div></div></li>`;
@@ -249,6 +255,22 @@ document.getElementById('menu').innerHTML = PAGES.map(([key, title]) => {
 for (const [key, labels] of Object.entries(menuGroups)) {
   labels.forEach((label, i) => PAGES.push([`${key}-${i}`, label, unsupported]));
 }
+const menuTip = Object.assign(document.createElement('div'), { id: 'menu-tip', role: 'tooltip', hidden: true, textContent: UNAVAILABLE });
+document.body.append(menuTip);
+const menuTipFor = e => e.target.closest?.('#menu [data-unavailable]');
+const showMenuTip = e => {
+  const a = menuTipFor(e);
+  if (!a) return;
+  const r = a.getBoundingClientRect();
+  menuTip.hidden = false;
+  menuTip.style.left = Math.max(4, Math.min(r.left, document.documentElement.clientWidth - menuTip.offsetWidth - 4)) + 'px';
+  menuTip.style.top = r.bottom + 4 + 'px';
+};
+const hideMenuTip = e => { if (menuTipFor(e)) menuTip.hidden = true; };
+const menuEl = document.getElementById('menu');
+['mouseover', 'focusin'].forEach(t => menuEl.addEventListener(t, showMenuTip));
+['mouseout', 'focusout'].forEach(t => menuEl.addEventListener(t, hideMenuTip));
+document.getElementById('snb').addEventListener('scroll', () => { menuTip.hidden = true; });
 
 function render() {
   const key = location.hash.slice(2);
@@ -448,7 +470,6 @@ const ACT = {
     alert('정렬순서가 저장되었습니다.');
   },
   dongil: () => alert('동일/대치 교과목으로 지정된 이수 과목이 없습니다.'),
-  todo: () => alert('목업에서는 아직 지원하지 않는 기능입니다.'),
   reset: (_, el) => { const page = el.closest('.search-box').dataset.page; delete query[page]; delete found[page]; },
   search: (_, el) => {
     const box = el.closest('.search-box'), f = n => (box.querySelector(`[name=${n}]:checked`) || box.querySelector(`[name=${n}]`)).value.trim();
