@@ -6,7 +6,6 @@ input, select, button { font: inherit; color: #4f535c; }
 #logo-area h2 { margin: 0 12px 0 4px; padding: 3px 0 3px 8px; border-left: 1px solid #bac2cb; font-size: 16px; color: #55606d; }
 .left-area, .right-area, .quick-area { display: flex; align-items: center; gap: 6px; }
 .school-name { width: 110px; color: #294e7b; font-size: 17px; font-weight: bold; }
-.mock-badge { padding: 2px 6px; border: 1px solid #9aacc3; border-radius: 3px; color: #294e7b; font-weight: bold; }
 .right-area { gap: 14px; }
 .right-area a { color: #9e2a20; font-size: 16px; font-weight: bold; text-decoration: none; }
 #edQuickSuupNo { width: 86px; }
@@ -104,7 +103,6 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .basic-section h4::before { content: "✓"; display: inline-grid; place-items: center; width: 12px; height: 12px; margin-right: 5px; border-radius: 2px; background: #426da6; color: white; font-size: 9px; }
 .basic-section + .basic-section { margin-top: 18px; }
 .basic-grid td:not(.empty) { min-height: 29px; }
-#dev-guide { position: fixed; right: 16px; bottom: 16px; }
 .grid a[data-act=limit], .grid .course-text-link, .course-link { color: inherit; text-decoration: none; }
 .grid tbody tr[data-no]:hover :is(a[href], button:enabled, input[type=button]:enabled) { text-decoration: underline; text-underline-offset: 2px; }
 .course-link { border: 0; background: none; padding: 0; cursor: pointer; line-height: 1.4; }
@@ -118,6 +116,9 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .course-dialog[data-kind=department] { min-height: min(584px, calc(100dvh - 24px)); }
 .course-dialog[data-kind=department] .course-dialog-footer { display: none; }
 .department-course-name { margin: 0 0 5px; }
+.course-dialog[data-kind=notice] { width: min(440px, calc(100vw - 24px)); }
+.course-dialog[data-kind=notice] .course-dialog-content { padding: 16px 20px 20px; font-size: 13px; }
+.course-dialog[data-kind=notice] ul { margin: 0; padding-left: 18px; }
 .course-dialog[data-kind=overview] { width: min(900px, calc(100vw - 24px)); min-height: min(684px, calc(100dvh - 24px)); }
 .course-dialog[data-kind=syllabus] { width: min(1040px, calc(100vw - 24px)); }
 .document-tools { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
