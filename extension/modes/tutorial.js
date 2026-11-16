@@ -45,6 +45,9 @@
     .sg-step button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
     .sg-ring[data-sg]{position:fixed;z-index:2147483645;pointer-events:none;border:3px solid #f59e0b;border-radius:8px;box-shadow:0 0 0 4px #f59e0b55,0 0 0 9999px #0000002e;transition:left ${EASE},top ${EASE},width ${EASE},height ${EASE},opacity ${EASE}}
     .sg-ring.jump{transition:none}
+    /* 말풍선 버튼: [다음]·[완료]는 진한 파란 주 버튼(오른쪽), [이전]은 테두리만 있는 보조 버튼(왼쪽 끝) */
+    .sg-bubble .sg-btn.sg-next{background:#2563eb;color:#fff;font-weight:bold}
+    .sg-bubble .sg-btn.sg-prev{margin-right:auto;background:transparent;color:#cbd5e1;box-shadow:inset 0 0 0 1px #64748b}
     .sg-ring.off{opacity:0}
     .sg-ring.end .sg-ring-tag{left:auto;right:-3px}
     .sg-ring.below .sg-ring-tag{bottom:auto;top:100%;margin:8px 0 0}
@@ -96,6 +99,23 @@
     }
     ringOn = el;
     place();
+  };
+  // 열 팁인데 그 열 칸에 버튼이 있으면(수강신청의 [신청], 희망신청의 [추가] 등) 머리글 대신 첫 번째로 보이는 실제 버튼을 강조.
+  // 이미 신청해 [신청]이 없는 행은 건너뛰고, 버튼이 있는 행이 없으면 null (머리글 강조)
+  const buttonIn = tip => {
+    if (!tip.find.column || !SG.rows) return null;
+    for (const tr of SG.rows()) {
+      const td = SG.cell(tr, tip.find.column);
+      const btn = td && SG.buttons(td).find(b => b.matches('input')); // 돋보기 같은 <button>은 빼고 [신청]·[추가] 같은 input 버튼만
+      if (btn) return btn;
+    }
+    return null;
+  };
+  // 방금 만든 말풍선의 버튼에 모양 구분용 클래스를 붙인다 (core 말풍선은 버튼 글자만 받으므로)
+  const markButtons = () => {
+    const box = [...(document.querySelectorAll?.('.sg-bubble') || [])].at(-1);
+    for (const btn of box?.querySelectorAll('.sg-btn') || [])
+      btn.classList.add(btn.textContent === '이전' ? 'sg-prev' : 'sg-next');
   };
   // 방금 만든 말풍선을 직전 말풍선 자리(첫 단계는 [튜토리얼] 버튼 자리)에서 제자리로 미끄러뜨린다
   const glide = () => {
@@ -186,7 +206,7 @@
           await until(() => SG.tipEl(tip), FIND_MS);
           if (!alive()) return;
           const found = SG.tipEl(tip);
-          const el = found || document.querySelector('#hyinContents h3') || panel;
+          const el = (found && buttonIn(tip)) || found || document.querySelector('#hyinContents h3') || panel;
 
           const direct = how === 'click' && !!found;
           const go = direct && tip.find.menu; // 다음 화면으로 넘어가는 단계
@@ -201,6 +221,7 @@
             : filter ? '검색 조건을 바꿔 볼 수 있어요. 준비되면 [다음]을 눌러 주세요.'
             : `강조된 항목의 설명을 읽고 [${next}] 버튼을 눌러 주세요.`);
           const bubble = SG.bubble(el, { title: tip.title, text: tip.text, buttons: direct ? back : [...back, next] });
+          markButtons();
           glide();
           const pressed = await wait(direct
             ? Promise.race([bubble, new Promise(done => { target = el; clicked = () => done('click'); })])
