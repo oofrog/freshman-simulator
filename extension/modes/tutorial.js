@@ -1,28 +1,262 @@
 // 신입생 튜토리얼 모드 (#7, 담당: 최지범)
-// 지금은 뼈대: 수강편람으로 이동 → STEPS의 팁을 차례로 강조하고 말풍선의 [다음]으로 넘어감 → 끝 모달.
-// TODO(#7): 단계 구성 (수강편람 → 기본수업 → 희망수업 → 수강신청), 단계 사이 화면 이동(SG.goMenu + SG.waitFor),
-//           "사용자가 직접 눌러서 넘어가기"(allow로 해당 요소만 클릭 허용), 진행 표시(3/12 등)
+// 어느 화면에서 시작해도 수강편람으로 이동한 뒤, STEPS를 차례로 강조하고 말풍선을 띄운다.
+//   수강편람 → 기본수업 → 희망수업 → 수강신청 → 신청내역 → 끝 모달
+// 말풍선 문구는 tips.js의 title·text를 그대로 쓴다. 진행과 조작 안내는 별도 패널에 표시한다.
 (() => {
-  // 단계 = tips.js의 팁 id. 문구는 tips.js에만 둔다.
-  const STEPS = ['common.menu.hope', 'common.col.limit'];
+  // 단계 = [tips.js의 팁 id, 넘어가는 동작]
+  //   'next'  말풍선의 [다음]  (두 번째로 보인 단계부터는 [이전]도 있어, 다른 화면의 단계면 그 화면으로 돌아간다)
+  //   'click' 강조된 요소를 사용자가 직접 누름 (그 요소만 클릭 허용). 서버 상태를 바꾸지 않는 메뉴·[조회]에만 쓴다.
+  //           메뉴 팁(find.menu)이면 그 화면으로 바뀔 때까지 기다린다.
+  // 화면에 요소가 없으면 화면 제목 옆에서 같은 팁을 읽고 [다음]으로 진행한다.
+  const STEPS = [
+    ['common.menu.pyunram', 'next'],
+    ['pyunram.filter', 'next'],
+    ['pyunram.search', 'click'],
+    ['common.col.no', 'next'],
+    ['common.col.code', 'next'],
+    ['common.col.seat', 'next'],
+    ['common.col.limit', 'next'],
+    ['common.menu.basic', 'click'],
+    ['basic.apply', 'next'],
+    ['basic.hopeAdd', 'next'],
+    ['common.menu.hope', 'click'],
+    ['hope.total', 'next'],
+    ['hope.apply', 'next'],
+    ['hope.delete', 'next'],
+    ['common.menu.apply', 'click'],
+    ['apply.filter', 'next'],
+    ['apply.apply', 'next'],
+    ['common.quick', 'next'],
+    ['common.menu.done', 'click'],
+    ['done.cancel', 'next'],
+    ['done.type', 'next'],
+  ];
+  const FIRST = '수강편람';
+  const NAV_MS = 10000; // 화면 이동을 기다리는 최대 시간 (실제 화면은 서버 응답을 기다림)
+  const FIND_MS = 1500; // 요소가 그려지길 기다리는 시간. 넘으면 화면 제목에 설명 표시
+  const MOVE_MS = 450;  // 강조 테두리가 다음 요소로 날아가는 시간
+  const EASE = `${MOVE_MS}ms cubic-bezier(.2,.8,.2,1)`;
+
+  const CSS = `
+    .sg-panel[data-sg]{display:none}
+    .sg-step[data-sg]{position:fixed;top:12px;right:12px;z-index:2147483646;width:min(260px,calc(100vw - 24px));padding:12px;background:#fff;border:2px solid #2563eb;border-radius:10px;box-shadow:0 4px 16px #0003}
+    .sg-step-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .sg-step-count{font-weight:bold;color:#1e3a8a}
+    .sg-step progress{display:block;width:100%;height:6px;margin:10px 0;accent-color:#2563eb}
+    .sg-step-hint{margin:10px 0 0;line-height:1.5}
+    .sg-step button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+    .sg-ring[data-sg]{position:fixed;z-index:2147483645;pointer-events:none;border:3px solid #f59e0b;border-radius:8px;box-shadow:0 0 0 4px #f59e0b55,0 0 0 9999px #0000002e;transition:left ${EASE},top ${EASE},width ${EASE},height ${EASE},opacity ${EASE}}
+    .sg-ring.jump{transition:none}
+    .sg-ring.off{opacity:0}
+    .sg-ring.end .sg-ring-tag{left:auto;right:-3px}
+    .sg-ring.below .sg-ring-tag{bottom:auto;top:100%;margin:8px 0 0}
+    .sg-ring-tag[data-sg]{display:none;position:absolute;left:-3px;bottom:100%;margin-bottom:8px;white-space:nowrap;padding:3px 10px;border-radius:999px;background:#2563eb;color:#fff;font-weight:bold;box-shadow:0 2px 8px #0004}
+    /* 직접 누르는 단계: 파란 테두리가 맥박처럼 퍼지고 "직접 눌러 보세요" 표가 붙는다 ([다음] 단계는 주황 고정) */
+    .sg-ring.act{border-color:#2563eb;animation:sg-pulse 1.2s ease-out infinite}
+    .sg-ring.act .sg-ring-tag{display:block}
+    @keyframes sg-pulse{0%{box-shadow:0 0 0 0 #2563ebaa,0 0 0 9999px #0000002e}70%,100%{box-shadow:0 0 0 14px #2563eb00,0 0 0 9999px #0000002e}}
+    @media (prefers-reduced-motion:reduce){.sg-ring[data-sg]{transition:none}.sg-ring.act{animation:none;box-shadow:0 0 0 4px #2563eb66,0 0 0 9999px #0000002e}}
+  `;
+
+  let run = 0;        // 시작할 때마다 1 증가. 멈추면 증가시켜 이전 진행을 끊는다
+  let target = null;  // 'click' 단계에서 누르길 기다리는 요소
+  let clicked = null; // 그 요소를 눌렀을 때 부를 함수
+  let filter = null;  // 현재 설명 중인 검색 조건 영역
+  let cancel = null;  // 말풍선·화면 대기 중에도 즉시 끝내기
+  let extras = [];    // 스타일·진행 패널 (멈출 때 지움)
+  let ring = null;    // 요소에서 요소로 날아가는 강조 테두리 (시선이 따라가도록)
+  let ringOn = null;  // 테두리가 감싸고 있는 요소
+
+  // 움직임 줄이기 설정이거나 위치를 잴 수 없는 환경(판정 스크립트)이면 애니메이션 없이 바로
+  const still = () => !globalThis.matchMedia || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let origin = null;  // 시작할 때 누른 [튜토리얼] 버튼의 위치 (첫 단계의 테두리·말풍선이 여기서 출발)
+  let from = null;    // 직전 말풍선 위치 { left, top } (다음 말풍선이 여기서 미끄러져 옴)
+
+  // 테두리를 사각형 r(화면 좌표)에 맞춘다. 오른쪽 끝·위쪽 끝이면 "직접 눌러 보세요" 표를 안쪽으로 돌린다
+  const setRect = r => {
+    Object.assign(ring.style, { left: r.left - 4 + 'px', top: r.top - 4 + 'px', width: r.width + 8 + 'px', height: r.height + 8 + 'px' });
+    ring.classList.toggle('end', r.left + 240 > innerWidth);
+    ring.classList.toggle('below', r.top < 44);
+  };
+  // 테두리를 ringOn 위치에 맞춘다. 스크롤·창 크기가 바뀌면 다시 부른다. 화면이 다시 그려져 요소가 사라졌거나 숨었으면 그대로 둔다
+  const place = () => {
+    const r = ring && ringOn?.isConnected && ringOn.getBoundingClientRect?.();
+    if (r && (r.width || r.height)) setRect(r);
+  };
+  // 애니메이션 없이 바로 적용 (출발 위치를 잡을 때)
+  const instantly = (node, cls, apply) => {
+    node.classList.toggle(cls, true);
+    apply();
+    void node.offsetWidth; // 위치를 먼저 적용한 뒤 애니메이션을 다시 켬
+    node.classList.toggle(cls, false);
+  };
+  // 테두리를 다음 요소로 날린다. 첫 단계는 숨어 있던 테두리가 [튜토리얼] 버튼 자리에서 나타나며 출발
+  const fly = el => {
+    if (ring.classList.contains('off')) {
+      if (origin) instantly(ring, 'jump', () => setRect(origin));
+      ring.classList.toggle('off', false);
+    }
+    ringOn = el;
+    place();
+  };
+  // 방금 만든 말풍선을 직전 말풍선 자리(첫 단계는 [튜토리얼] 버튼 자리)에서 제자리로 미끄러뜨린다
+  const glide = () => {
+    const box = [...(document.querySelectorAll?.('.sg-bubble') || [])].at(-1);
+    if (!box) return;
+    const to = { left: box.style.left, top: box.style.top };
+    const start = from || (origin && { left: origin.left + scrollX + 'px', top: origin.top + scrollY + 'px', fade: true });
+    from = to;
+    if (!start || still()) return;
+    box.style.transition = 'none';
+    Object.assign(box.style, { left: start.left, top: start.top, opacity: start.fade ? '0' : '1' });
+    void box.offsetWidth;
+    box.style.transition = `left ${EASE},top ${EASE},opacity ${EASE}`;
+    Object.assign(box.style, to, { opacity: '1' });
+  };
+
+  const tipOf = id => SG.tips.find(t => t.id === id);
+  // 단계마다 그 단계를 보여 줄 화면: 수강편람에서 시작해 메뉴를 누르는 단계 다음부터 그 메뉴의 화면
+  const screensOf = steps => {
+    let at = FIRST;
+    return steps.map(([id, how]) => {
+      const here = at, menu = how === 'click' && tipOf(id)?.find.menu;
+      if (menu) at = menu;
+      return here;
+    });
+  };
 
   SG.register('tutorial', {
     label: '튜토리얼',
+    steps: STEPS, screensOf, // 판정 스크립트(test/tutorial.test.js)가 읽음
     async start() {
-      if (SG.screen() !== '수강편람') {
-        SG.goMenu('수강편람');
-        await SG.waitFor(() => SG.screen() === '수강편람');
+      const me = ++run, alive = () => me === run;
+      const cancelled = new Promise(done => { cancel = done; });
+      const wait = promise => Promise.race([promise, cancelled]);
+      // 중단되면 waitFor의 타이머도 다음 확인 때 정리된다.
+      const until = (test, ms) => wait(SG.waitFor(() => !alive() || test(), ms).then(() => true, () => false));
+      const style = SG.el('style', { textContent: CSS });
+      const count = SG.el('span', { className: 'sg-step-count' });
+      const progress = SG.el('progress', { max: STEPS.length, value: 0 });
+      progress.setAttribute('aria-label', '튜토리얼 진행');
+      const hint = SG.el('p', { className: 'sg-step-hint' });
+      hint.setAttribute('role', 'status');
+      const screens = screensOf(STEPS);
+      const panel = SG.el('section', { className: 'sg-step' },
+        SG.el('div', { className: 'sg-step-head' }, count,
+          SG.el('button', { className: 'sg-btn off', textContent: '그만하기', onclick: () => SG.stop() })),
+        progress, hint);
+      panel.setAttribute('aria-label', '튜토리얼 진행 안내');
+      // 테두리는 방금 누른 패널의 [튜토리얼] 버튼에서 출발한다 (아래 CSS가 패널을 숨기기 전에 자리를 잡음)
+      // 테두리는 첫 단계 전까지 숨겨 두고(화면 이동 중 멈춰 있지 않게), 첫 단계에서 방금 누른 [튜토리얼] 버튼 자리에서 출발한다
+      // 버튼 위치는 아래 CSS가 패널을 숨기기 전에 잰다
+      ring = SG.el('div', { className: 'sg-ring off' }, SG.el('span', { className: 'sg-ring-tag', textContent: '👆 여기를 직접 눌러 보세요' }));
+      document.body.append(ring);
+      origin = document.querySelector('.sg-panel .sg-btn.on')?.getBoundingClientRect?.() || null;
+      from = null;
+      document.head.append(style);
+      document.body.append(panel);
+      extras = [style, panel, ring];
+      globalThis.addEventListener?.('scroll', place, true); // 표(.grid-wrap) 안 가로 스크롤도 잡도록 capture
+      globalThis.addEventListener?.('resize', place);
+
+      const show = (i, message) => {
+        count.textContent = `튜토리얼 ${i + 1} / ${STEPS.length}`;
+        progress.value = i + 1;
+        hint.textContent = message;
+      };
+
+      // 그 화면이 아니면 메뉴로 이동하고 바뀔 때까지 기다린다. 멈췄으면 false
+      const goTo = async (name, force = false) => {
+        if (!alive()) return false;
+        if (!force && SG.screen() === name) return true;
+        hint.textContent = `${name}으로 이동하고 있어요.`;
+        if (!SG.goMenu(name)) throw new Error(`${name} 메뉴를 찾지 못했어요.`);
+        const ok = await until(() => SG.screen() === name, NAV_MS);
+        if (!alive()) return false;
+        if (!ok) throw new Error(`${name} 화면으로 이동하지 못했어요.`);
+        return true;
+      };
+
+      try {
+        show(0, '수강편람에서 시작해 다섯 화면을 차례로 살펴봐요.');
+        if (!await goTo(FIRST, true)) return;
+        for (let i = 0; i < STEPS.length;) {
+          const [id, how] = STEPS[i];
+          if (!await goTo(screens[i])) return;
+          const tip = tipOf(id);
+          if (!tip) throw new Error(`설명 데이터를 찾지 못했어요: ${id}`);
+          await until(() => SG.tipEl(tip), FIND_MS);
+          if (!alive()) return;
+          const found = SG.tipEl(tip);
+          const el = found || document.querySelector('#hyinContents h3') || panel;
+
+          const direct = how === 'click' && !!found;
+          const go = direct && tip.find.menu; // 다음 화면으로 넘어가는 단계
+          const back = i ? ['이전'] : [];
+          const next = i === STEPS.length - 1 ? '완료' : '다음';
+          filter = found && ['pyunram.filter', 'apply.filter'].includes(id) ? found : null;
+          el.scrollIntoView({ block: 'nearest', inline: 'center' });
+          ring.classList.toggle('act', direct); // 직접 누를 곳이면 다른 모양으로
+          fly(el); // 테두리와 말풍선이 함께 다음 요소로 이동 (core의 outline 강조 대신)
+          show(i, !found ? `현재 화면에는 이 항목이 없어요. 설명을 읽고 [${next}] 버튼을 눌러 주세요.`
+            : direct ? `강조된 [${tip.find.menu || tip.find.button}]를 직접 눌러 보세요.`
+            : filter ? '검색 조건을 바꿔 볼 수 있어요. 준비되면 [다음]을 눌러 주세요.'
+            : `강조된 항목의 설명을 읽고 [${next}] 버튼을 눌러 주세요.`);
+          const bubble = SG.bubble(el, { title: tip.title, text: tip.text, buttons: direct ? back : [...back, next] });
+          glide();
+          const pressed = await wait(direct
+            ? Promise.race([bubble, new Promise(done => { target = el; clicked = () => done('click'); })])
+            : bubble);
+          if (!alive()) return;
+          target = clicked = null;
+          filter = null;
+          SG.clear();
+
+          if (pressed === '이전') { i--; continue; }
+          i++;
+          if (go) { // 사용자가 누른 메뉴의 화면이 뜰 때까지 (goTo가 메뉴를 한 번 더 누르지 않도록)
+            hint.textContent = `${go}으로 이동하고 있어요.`;
+            const ok = await until(() => SG.screen() === go, NAV_MS);
+            if (!alive()) return;
+            if (!ok) throw new Error(`${go} 화면으로 이동하지 못했어요.`);
+          }
+        }
+        SG.unhighlight();
+        count.textContent = `튜토리얼 ${STEPS.length} / ${STEPS.length} · 완료`;
+        hint.textContent = '다섯 화면을 모두 살펴봤어요.';
+        await wait(SG.modal({ title: '튜토리얼 완료', text: '수강편람부터 신청내역까지 모두 살펴봤어요. 궁금한 부분은 [자유 팁]에서 다시 확인하거나 [실전 재현]에서 연습해 보세요.', buttons: ['닫기'] }));
+        if (alive()) SG.stop();
+      } catch (err) {
+        if (!alive()) return;
+        target = clicked = filter = null;
+        SG.clear();
+        hint.textContent = '진행이 멈췄어요. 화면을 확인한 뒤 다시 시작할 수 있어요.';
+        const choice = await wait(SG.modal({ title: '튜토리얼을 이어갈 수 없어요', text: String(err.message || err), buttons: ['그만하기', '다시 시작'] }));
+        if (!alive()) return;
+        if (choice === '다시 시작') return SG.start('tutorial');
+        SG.stop();
       }
-      for (const id of STEPS) {
-        const tip = SG.tips.find(t => t.id === id);
-        const el = tip && SG.tipEl(tip);
-        if (!el) continue; // 이 화면에 없는 요소는 건너뜀
-        SG.highlight(el);
-        await SG.bubble(el, { title: tip.title, text: tip.text, buttons: ['다음'] });
-      }
-      SG.unhighlight();
-      await SG.modal({ title: '튜토리얼 끝', text: '궁금한 부분은 [자유 팁]에서 언제든 다시 볼 수 있어요.' });
-      SG.stop();
+    },
+    stop() {
+      run++;
+      cancel?.();
+      target = clicked = filter = cancel = null;
+      extras.forEach(e => e.remove());
+      extras = [];
+      ring = ringOn = origin = from = null;
+      globalThis.removeEventListener?.('scroll', place, true);
+      globalThis.removeEventListener?.('resize', place);
+    },
+    // 'click' 단계에서 강조된 요소만 통과. 실제 click 이벤트에서만 다음 단계로
+    // (Enter keydown에서 넘기면 뒤따르는 click이 막혀 메뉴 이동이 안 된다)
+    allow(el, e) {
+      // 검색 조건만 조작 가능. Enter 제출이나 신청·추가·삭제 버튼은 허용하지 않는다.
+      const input = el.closest('label')?.control || el;
+      if (filter?.contains(el) && filter.contains(input) && input.matches('input:not([type]), input[type=text], input[type=number], input[type=radio], input[type=checkbox], select, option'))
+        return e.type !== 'submit' && e.type !== 'keydown';
+      if (!target || !target.contains(el)) return false;
+      if (e.type === 'click') clicked?.();
+      return true;
     },
   });
 })();
