@@ -36,8 +36,12 @@
   const EASE = `${MOVE_MS}ms cubic-bezier(.2,.8,.2,1)`;
 
   const CSS = `
-    .sg-panel[data-sg]{display:none}
-    .sg-step[data-sg]{position:fixed;top:12px;right:12px;z-index:2147483646;width:min(260px,calc(100vw - 24px));padding:12px;background:#fff;border:2px solid #2563eb;border-radius:10px;box-shadow:0 4px 16px #0003}
+    /* 모드 패널 → 진행 패널: 같은 자리에서 모드 패널은 살짝 줄며 사라지고, 진행 패널이 이어서 내려앉듯 나타난다 */
+    .sg-panel[data-sg]{pointer-events:none;transform-origin:top right;animation:sg-panel-out .18s ease-in forwards}
+    .sg-step[data-sg]{position:fixed;top:12px;right:12px;z-index:2147483646;width:min(260px,calc(100vw - 24px));padding:12px;background:#fff;border:2px solid #2563eb;border-radius:10px;box-shadow:0 4px 16px #0003;transform-origin:top right;animation:sg-step-in .28s cubic-bezier(.2,.8,.2,1) .12s both}
+    @keyframes sg-panel-out{to{opacity:0;transform:scale(.96);visibility:hidden}}
+    @keyframes sg-step-in{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+    @media (prefers-reduced-motion:reduce){.sg-panel[data-sg]{animation:none;display:none}.sg-step[data-sg]{animation:none}}
     .sg-step-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
     .sg-step-count{font-weight:bold;color:#1e3a8a}
     .sg-step progress{display:block;width:100%;height:6px;margin:10px 0;accent-color:#2563eb}
