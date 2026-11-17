@@ -21,112 +21,27 @@
 //   빨강(정보 모름·보충 필요)과 연결할 화면 요소를 아직 모르는 항목은 위에 "[보류]" 주석을 단다 — 확인되면 주석만 지운다.
 //   find: {} 는 연결할 요소가 없어 화면에서 뜨지 않는 팁.
 SG.tips = [
-  // ---------- 공통: 위쪽 바·왼쪽 메뉴 (Figma 01) ----------
-  {
-    id: 'common.menu.pyunram',
-    screen: '공통',
-    find: { menu: '수강편람' },
-    title: '수강편람',
-    text: '개설 수업을 조건별로 찾아보는 메뉴예요. 조회한 수업이 자동으로 신청되는 것은 아니에요.',
-    source: 'Figma N01 | ERICA 수강신청 프로그램 이용방법',
-  },
-  // 파랑: 생략 검토 중
-  {
-    id: 'common.menu.guide',
-    screen: '공통',
-    find: { menu: '수강안내' },
-    title: '수강안내',
-    text: '해당 학기의 신청 일정과 유의사항을 확인하는 메뉴예요. 신청 전에 ERICA 안내를 확인해 주세요.',
-    source: 'Figma N02 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.basic',
-    screen: '공통',
-    find: { menu: '기본수업' },
-    title: '기본수업',
-    text: '내 소속 학과·반의 기본수업을 모아 보는 메뉴예요. 실제 신청 여부는 [신청내역]에서 확인해 주세요.',
-    source: 'Figma N03 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.apply',
-    screen: '공통',
-    find: { menu: '수강신청' },
-    title: '수강신청',
-    text: '수업을 검색하고 실제 수강신청을 진행하는 메뉴예요. 본인의 신청 기간과 이수제한을 확인해 주세요.',
-    source: 'Figma N04 | ERICA 수강신청 프로그램 이용방법, ERICA 수강신청 이수제한 안내',
-  },
-  {
-    id: 'common.menu.hope',
-    screen: '공통',
-    find: { menu: '희망수업' },
-    title: '희망수업',
-    text: '관심 수업을 미리 담아 두는 메뉴예요. 담아 두기만 해서는 신청이 완료되지 않아요.',
-    source: 'Figma N05 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.done',
-    screen: '공통',
-    find: { menu: '신청내역' },
-    title: '신청내역',
-    text: '실제로 신청된 과목을 확인하는 메뉴예요. 신청 후에는 과목과 적용 이수구분을 확인해 주세요.',
-    source: 'Figma N06 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.menu.graduation',
-    screen: '공통',
-    find: { menu: '졸업사정조회' },
-    title: '졸업사정조회',
-    text: '졸업요건별 이수 현황을 확인하는 메뉴예요. 학과별 별도 졸업요건도 함께 확인해 주세요.',
-    source: 'Figma N08 | ERICA 2026 졸업요건 사전확인 안내',
-  },
-  {
-    id: 'common.menu.volunteer',
-    screen: '공통',
-    find: { menu: '사회봉사' },
-    title: '사회봉사',
-    text: '사회봉사 교과목의 안내와 신청 관련 기능을 확인하는 메뉴예요. 일반 수업과 신청 일정이 다를 수 있어요.',
-    source: 'Figma N10 | ERICA 포털 이용안내 사회봉사 기능',
-  },
-  // 파랑: 생략 검토 중
-  {
-    id: 'common.menu.keyword',
-    screen: '공통',
-    find: { menu: '키워드검색' },
-    title: '키워드검색',
-    text: '키워드로 정보를 찾는 메뉴예요. 어떤 정보를 검색하는지는 연결 화면의 안내를 확인해 주세요.',
-    source: 'Figma N12 | 실제 화면 표시 확인',
-  },
+  // ---------- 공통: 위쪽 바 (Figma 01) ----------
+  // 위쪽 메뉴(#snb) 팁은 두지 않는다: 자유 팁에서도 직접 눌러 이동하는 요소(SG.tryable)라 팁이 뜨지 않는다 (#19)
   {
     id: 'common.quick',
     screen: '공통',
-    find: { selector: '#edQuickSuupNo, #btn_save_quick' },
+    find: { selector: '.quick-area' }, // 묶음: '수업번호' 글자·입력칸·[신청]
     title: '수업번호 빠른 신청',
     text: '개별 수업의 수업번호를 입력해 바로 신청하는 기능이에요. 학수번호와 구분하고 신청 후 결과를 확인해 주세요.',
     source: 'Figma N16 | ERICA 수강신청 프로그램 이용방법',
   },
+  // 묶음: 최소·최대·신청학점 (+영어등급) 칸 전체. 칸은 disabled라 core CSS로 클릭을 이 영역에 넘긴다
   {
-    id: 'common.credit.min',
+    id: 'common.credit',
     screen: '공통',
-    find: { selector: '#edMinHakjeom' },
-    title: '최소학점',
-    text: '이번 학기에 신청해야 하는 최소학점으로 표시된 값이에요. 본인의 학적과 해당 학기 기준을 확인해 주세요.',
-    source: 'Figma N13 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.credit.max',
-    screen: '공통',
-    find: { selector: '#edMaxHakjeom' },
-    title: '최대학점',
-    text: '이번 학기에 신청할 수 있는 최대학점으로 표시된 값이에요. 화면의 본인 적용값을 기준으로 확인해 주세요.',
-    source: 'Figma N14 | ERICA 수강신청 프로그램 이용방법',
-  },
-  {
-    id: 'common.credit.sum',
-    screen: '공통',
-    find: { selector: '#edSincheongHakjeom' },
-    title: '신청학점',
-    text: '현재 실제로 신청된 과목의 학점 합계를 확인하는 항목이에요. 희망수업의 후보 학점 합계와 구분해 주세요.',
-    source: 'Figma N15 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
+    find: { selector: '.hakjeom-area' },
+    title: '최소·최대·신청학점',
+    text: '최소학점: 이번 학기에 신청해야 하는 최소학점으로 표시된 값이에요.\n' +
+      '최대학점: 이번 학기에 신청할 수 있는 최대학점으로 표시된 값이에요.\n' +
+      '신청학점: 현재 실제로 신청된 과목의 학점 합계예요. 희망수업의 후보 학점 합계와 구분해 주세요.\n' +
+      '본인의 학적과 해당 학기 기준, 화면의 본인 적용값을 확인해 주세요.',
+    source: 'Figma N13·N14·N15 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
   },
   // [보류] 연결할 화면 요소(선택자) 미확인
   {
@@ -139,33 +54,6 @@ SG.tips = [
   },
   // [보류] 빨강(정보 모름·보충 필요)
   {
-    id: 'common.menu.increase',
-    screen: '공통',
-    find: { menu: '증원신청내역' },
-    title: '증원신청내역',
-    text: '제출한 증원 요청과 처리 결과를 확인하는 메뉴예요. 요청 제출과 승인 확정은 구분해 주세요.',
-    source: 'Figma N07 | 2026-2 ERICA 증원신청 공지, 실제 화면 표시 확인',
-  },
-  // [보류] 빨강(정보 모름·보충 필요)
-  {
-    id: 'common.menu.bachmaster',
-    screen: '공통',
-    find: { menu: '학석사공통신청' },
-    title: '학석사공통신청',
-    text: '학사·석사 공통교과목 신청 관련 메뉴예요. 이용 대상과 신청 조건은 해당 학기 안내에서 확인해 주세요.',
-    source: 'Figma N09 | 실제 화면 표시 확인',
-  },
-  // [보류] 빨강(정보 모름·보충 필요)
-  {
-    id: 'common.menu.summer',
-    screen: '공통',
-    find: { menu: '국제여름/겨울학교' },
-    title: '국제여름 겨울학교',
-    text: '국제여름·겨울학교 관련 메뉴예요. 개설 강좌와 참가 자격, 신청 일정은 해당 프로그램 공지를 확인해 주세요.',
-    source: 'Figma N11 | 국제여름학교·국제교류 안내(서울 운영 사례), 실제 화면 표시 확인',
-  },
-  // [보류] 빨강(정보 모름·보충 필요)
-  {
     id: 'common.mock',
     screen: '공통',
     find: {},
@@ -174,14 +62,6 @@ SG.tips = [
     source: 'Figma N17 | 실제 화면 표시 확인',
   },
   // ---------- 수강편람 (Figma 02) — 표 열 설명은 다른 화면에도 같은 열이 있어 맨 아래 공통 열로 ----------
-  {
-    id: 'pyunram.filter',
-    screen: '수강편람',
-    find: { selector: '.search-box' },
-    title: '검색 필터',
-    text: '원하는 조건으로 수업을 찾을 수 있어요. 조건을 고른 뒤 [조회]를 눌러 주세요.',
-    source: 'Figma 01 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
-  },
   // 파랑: 생략 검토 중
   {
     id: 'pyunram.search',
@@ -335,7 +215,7 @@ SG.tips = [
   {
     id: 'hope.total',
     screen: '희망수업',
-    find: { selector: '#edGwamok, #edHakjeom' },
+    find: { selector: 'li:has(> #edGwamok)' }, // 묶음: 'N 과목 / N 학점' 줄 (같은 줄의 시간표보기 버튼은 자기 팁이 먼저 뜸)
     title: '과목 수 학점 합계',
     text: '희망수업에 담긴 후보 과목 수와 학점 합계예요. 실제 신청된 학점이나 이번 학기 최대학점과는 구분해 주세요.',
     source: 'Figma H05 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
@@ -343,7 +223,7 @@ SG.tips = [
   {
     id: 'hope.notice',
     screen: '희망수업',
-    find: { selector: '.notice' },
+    find: { selector: 'ul:has(#edGwamok) > li:last-child' },
     title: '신청 전 최종 확인',
     text: '희망수업에 담은 뒤에도 수업시간이나 이수제한이 바뀔 수 있어요. 실제 신청 직전에 다시 확인해 주세요.',
     source: 'Figma H13 | 실제 화면 표시 확인',
@@ -367,7 +247,7 @@ SG.tips = [
   {
     id: 'hope.delete',
     screen: '희망수업',
-    find: { button: '희망삭제' },
+    find: { column: '희망수업 삭제' }, // 묶음: 버튼 대신 칸 전체(머리글 포함)
     title: '희망삭제',
     text: '이 과목을 희망수업 목록에서 빼는 버튼이에요. 이미 신청한 수업을 취소하는 기능과는 달라요.',
     source: 'Figma H12 | ERICA 수강신청 프로그램 이용방법',
@@ -422,7 +302,7 @@ SG.tips = [
   {
     id: 'hope.retakeName',
     screen: '희망수업',
-    find: { column: '재수강과목명' },
+    find: { column: '재수강과목' },
     title: '재수강 과목명',
     text: '재수강과 연결된 교과목명을 확인하는 항목이에요. 재수강 여부와 학수번호를 함께 확인해 주세요.',
     source: 'Figma H16 | ERICA 성적상승 재수강 안내, 실제 화면 표시 확인',
@@ -440,18 +320,10 @@ SG.tips = [
   {
     id: 'apply.scope',
     screen: '수강신청',
-    find: { selector: 'select[name=gubun]' },
+    find: { selector: 'div:has(> .sgsg-season > input[name=strIlbanCommonGb])' }, // 묶음: 전체·공통과목·학과과목·핵심/특화 라디오 전체
     title: '공통과목 학과과목',
     text: '공통과목과 학과과목 등 검색 범위를 고르는 항목이에요. 졸업학점 인정 여부는 본인의 교육과정에서 따로 확인해 주세요.',
     source: 'Figma A07 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
-  },
-  {
-    id: 'apply.filter',
-    screen: '수강신청',
-    find: { selector: '.search-box' },
-    title: '검색 조건',
-    text: '조직·연도·학기·학년·과목명 등의 조건으로 수업을 찾을 수 있어요. ERICA와 원하는 학기가 맞는지 먼저 확인해 주세요.',
-    source: 'Figma A02 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
   },
   // 파랑: 생략 검토 중
   {
@@ -470,14 +342,6 @@ SG.tips = [
     title: '초기화',
     text: '검색 조건을 기본 상태로 되돌리는 버튼이에요. 신청된 과목을 취소하는 버튼과는 달라요.',
     source: 'Figma A04 | 실제 화면 표시 확인',
-  },
-  {
-    id: 'apply.detail',
-    screen: '수강신청',
-    find: { button: '상세조회' },
-    title: '상세조회',
-    text: '추가 검색 조건을 확인하는 버튼이에요. 특수강좌 등 필요한 조건을 함께 확인해 주세요.',
-    source: 'Figma A05 | ERICA 수강신청 프로그램 이용방법',
   },
   {
     id: 'apply.apply',
@@ -507,7 +371,7 @@ SG.tips = [
   {
     id: 'apply.empty',
     screen: '수강신청',
-    find: { selector: '#gdMain td.empty' },
+    find: { selector: '#gdMain td.emptyDataList' },
     title: '조회 결과 없음',
     text: '아직 조회하지 않았거나 조건에 맞는 결과가 없다는 안내예요. 먼저 조회하고 검색 조건을 다시 확인해 주세요.',
     source: 'Figma A12 | 실제 화면 표시 확인',
@@ -552,7 +416,7 @@ SG.tips = [
   {
     id: 'done.cancel',
     screen: '신청내역',
-    find: { button: '수강취소' },
+    find: { column: '수강취소' }, // 묶음: 버튼 대신 칸 전체(머리글 포함)
     title: '수강취소',
     text: '이미 신청한 수업을 취소하는 버튼이에요. 취소 가능 기간과 제한을 확인하고, 처리 후 신청내역을 다시 확인해 주세요.',
     source: 'Figma C02 | ERICA 수강신청 프로그램 이용방법, 2026-2 ERICA 증원신청 공지',
@@ -604,7 +468,7 @@ SG.tips = [
   {
     id: 'done.retakeName',
     screen: '신청내역',
-    find: { column: '재수강과목명' },
+    find: { column: '재수강과목' },
     title: '재수강 과목명',
     text: '재수강과 연결된 교과목 이름을 확인하는 항목이에요. 재수강 여부와 코드까지 함께 확인해 주세요.',
     source: 'Figma C05 | ERICA 성적상승 재수강 안내, 실제 화면 표시 확인',
@@ -613,7 +477,7 @@ SG.tips = [
   {
     id: 'done.print',
     screen: '신청내역',
-    find: { button: '신청과목시간표확인' },
+    find: { button: '신청과목시간표확인(고지서출력)' },
     title: '신청과목시간표확인 고지서출력',
     text: '신청한 과목의 시간표와 수강신청 확인서 등을 확인·출력하는 버튼이에요. 필요한 출력 종류는 팝업에서 선택해 주세요.',
     source: 'Figma C08 | ERICA 학사 FAQ 수강신청 확인서 출력',

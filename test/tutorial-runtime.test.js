@@ -90,7 +90,10 @@ function setup(initialScreen = '수강편람') {
       if (state.missing.has(tip.id)) return null;
       if (!nodes.has(tip.id)) {
         const tag = tip.find.menu ? 'a' : tip.find.button ? 'button' : tip.find.column ? 'th' : 'div';
-        nodes.set(tip.id, new Element(tag, { tip, className: tip.find.selector === '.search-box' ? 'search-box' : '' }));
+        const node = new Element(tag, { tip });
+        // [조회]는 실제 화면처럼 검색 영역(.search-box) 안에 둔다 (튜토리얼은 그 영역의 조건 칸도 허용)
+        if (tip.find.button === '조회') new Element('div', { className: 'search-box' }, node);
+        nodes.set(tip.id, node);
       }
       return nodes.get(tip.id);
     },
@@ -160,7 +163,7 @@ test('모든 시작 화면에서 수강편람으로 이동하고 팁 원문 그�
       assert.equal(h.state.screen, '수강편람');
       assert.equal(h.state.menus[0], '수강편람', '이미 첫 화면이어도 메뉴 클릭으로 시작');
       for (const [index, [id]] of h.mode.steps.entries()) {
-        const tip = h.SG.tips.find(item => item.id === id);
+        const tip = h.mode.tipOf(id);
         assert.equal(h.state.bubble?.options.title, tip.title, id);
         assert.equal(h.state.bubble?.options.text, tip.text, id);
         const ui = descendants(h.document.body);
@@ -185,12 +188,12 @@ test('모든 시작 화면에서 수강편람으로 이동하고 팁 원문 그�
 test('이전은 앞 화면으로 돌아가며 다시 진행하면 같은 메뉴를 한 번만 누른다', async () => {
   const h = setup();
   await h.start();
-  const menuIndex = h.mode.steps.findIndex(([id]) => id === 'common.menu.basic');
+  const menuIndex = h.mode.steps.findIndex(([id]) => id === 'menu:기본수업');
   for (let i = 0; i <= menuIndex; i++) await h.advance();
   assert.equal(h.state.screen, '기본수업');
   await h.press('이전');
   assert.equal(h.state.screen, '수강편람');
-  assert.equal(h.state.bubble.target.tip.id, 'common.menu.basic');
+  assert.equal(h.state.bubble.target.tip.id, 'menu:기본수업');
   const automaticMenus = h.state.menus.length;
   await h.advance();
   assert.equal(h.state.screen, '기본수업');
@@ -200,7 +203,7 @@ test('이전은 앞 화면으로 돌아가며 다시 진행하면 같은 메뉴�
 });
 
 test('다음 대기와 직접 클릭 대기에서 종료한 실행이 해소되고 재시작은 첫 단계부터 진행한다', async () => {
-  for (const index of [0, 2]) {
+  for (const index of [1, 0]) { // 1: [다음] 대기, 0: [조회] 직접 클릭 대기
     const h = setup();
     const oldRun = await h.start();
     for (let i = 0; i < index; i++) await h.advance();
@@ -210,7 +213,7 @@ test('다음 대기와 직접 클릭 대기에서 종료한 실행이 해소되�
     assert.equal(h.state.bubble, null);
     assert.equal(h.document.head.children.length, 0);
     const newRun = await h.start();
-    assert.equal(h.state.bubble.target.tip.id, 'common.menu.pyunram');
+    assert.equal(h.state.bubble.target.tip.id, 'pyunram.search');
     assert.equal(newRun.settled, false);
     h.SG.stop();
     await h.flush();
@@ -229,7 +232,7 @@ test('화면 이동을 기다리는 중 종료해도 실행이 즉시 해소되�
   h.state.deferMenu = false;
   const newRun = await h.start();
   await h.expire();
-  assert.equal(h.state.bubble?.target.tip.id, 'common.menu.pyunram');
+  assert.equal(h.state.bubble?.target.tip.id, 'pyunram.search');
   assert.equal(h.state.modal, null);
   assert.equal(newRun.settled, false);
   h.SG.stop();
@@ -263,13 +266,13 @@ test('이동 실패 후 재시도하면 첫 단계로 정상 복귀한다', asyn
   h.state.failMenu = false;
   await h.press(retry);
   assert.equal(h.state.screen, '수강편람');
-  assert.equal(h.state.bubble?.target.tip.id, 'common.menu.pyunram');
+  assert.equal(h.state.bubble?.target.tip.id, 'pyunram.search');
   assert.equal(run.error, null);
   h.SG.stop();
 });
 
-test('필터·이동 메뉴·마지막 요소가 없어도 원문을 생략하지 않고 다음 단계로 진행한다', async t => {
-  for (const id of ['pyunram.filter', 'common.menu.basic', 'done.type']) {
+test('열·이동 메뉴·마지막 요소가 없어도 원문을 생략하지 않고 다음 단계로 진행한다', async t => {
+  for (const id of ['common.col.no', 'menu:기본수업', 'done.type']) {
     await t.test(id, async () => {
       const h = setup();
       h.state.missing.add(id);
@@ -277,7 +280,7 @@ test('필터·이동 메뉴·마지막 요소가 없어도 원문을 생략하�
       const index = h.mode.steps.findIndex(([stepId]) => stepId === id);
       for (let i = 0; i < index; i++) await h.advance();
       await h.expire();
-      const tip = h.SG.tips.find(item => item.id === id);
+      const tip = h.mode.tipOf(id);
       assert.equal(h.state.bubble?.target, h.heading);
       assert.equal(h.state.bubble.options.title, tip.title);
       assert.equal(h.state.bubble.options.text, tip.text);
@@ -289,11 +292,10 @@ test('필터·이동 메뉴·마지막 요소가 없어도 원문을 생략하�
   }
 });
 
-test('필터 단계는 안전한 입력만 허용하고 신청 버튼과 Enter 제출은 차단한다', async () => {
+test('[조회] 단계는 검색 영역의 안전한 입력만 허용하고 신청 버튼과 Enter 제출은 차단한다', async () => {
   const h = setup();
   await h.start();
-  await h.advance();
-  const filter = h.state.bubble.target;
+  const filter = h.state.bubble.target.parentElement; // [조회]가 든 검색 영역
   const text = new Element('input', { type: 'text' });
   const select = new Element('select');
   const radio = new Element('input', { type: 'radio' });
@@ -315,7 +317,6 @@ test('필터 단계는 안전한 입력만 허용하고 신청 버튼과 Enter �
   assert.equal(h.mode.allow(buttonLabel, { type: 'click' }), false);
   assert.equal(h.mode.allow(outsideInput, { type: 'click' }), false);
   assert.equal(h.mode.allow(outsideLabel, { type: 'click' }), false);
-  await h.advance();
   const search = h.state.bubble.target;
   assert.equal(h.mode.allow(search, { type: 'keydown', key: 'Enter' }), true);
   await h.flush();

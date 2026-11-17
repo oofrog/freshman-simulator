@@ -165,3 +165,7 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
   .name-filter, .year-filter, .term-filter, .grade-filter, .special-filters { margin-left: 0; }
   #logo-area { padding-right: 10px; }
 }
+
+/* 페이지 링크 (실제 #pagingPanel과 같은 구조) */
+#pagingPanel { padding: 8px 0; text-align: center; }
+#pagingPanel .strong { font-weight: bold; color: #296BAE; }

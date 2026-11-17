@@ -35,22 +35,30 @@ window.SG = (() => {
   });
 
   // ---------- 팁 찾기 (팁 데이터 형식: tips.js) ----------
-  const tipsHere = () => (SG.tips || []).filter(t => t.screen === '공통' || t.screen === screen());
-  const columnOf = e => {
-    const c = e.closest('th, td');
-    if (!c || !grid()?.contains(c)) return null;
-    if (c.tagName === 'TH') return norm(c.textContent);
-    return headers()[cells(c.parentElement).indexOf(c)];
-  };
-  const matches = (find, e) =>
-    (find.button && e.matches('input[type=button], input[type=submit], button') && norm(label(e)) === norm(find.button)) ||
-    (find.menu && e.matches('#snb a[title]') && e.title === find.menu) ||
-    (find.column && e.matches('th, td') && columnOf(e) === norm(find.column)) ||
-    (find.selector && e.matches(find.selector));
-  // 누른 요소(또는 그 조상)에 해당하는 팁 → { tip, el }
+  const tipsHere = (s = screen()) => (SG.tips || []).filter(t => t.screen === '공통' || t.screen === s);
+  // 누른·올린 요소(또는 그 조상)에 해당하는 팁 → { tip, el }. 직접 눌러 보는 요소(tryable)는 팁 없음으로 친다.
+  // 자유 팁에서는 마우스를 올릴 때마다 불리므로 화면 이름·표·머리글은 한 번만, 칸의 열 이름은 칸마다 한 번만 읽는다
   const matchTip = target => {
-    for (let e = target; e && e !== document.body; e = e.parentElement)
-      for (const tip of tipsHere()) if (matches(tip.find, e)) return { tip, el: e };
+    if (tryable(target)) return null;
+    const tips = tipsHere(), g = grid();
+    let hs;
+    const columnOf = c => {
+      if (!g?.contains(c)) return null;
+      if (c.colSpan > 1) return null; // 한 줄을 다 차지하는 칸(조회 결과 없음, 표 아래 바닥 줄)은 어느 열도 아님
+      if (c.tagName === 'TH') return norm(c.textContent);
+      return (hs ??= headers())[cells(c.parentElement).indexOf(c)] ?? null;
+    };
+    for (let e = target; e && e !== document.body; e = e.parentElement) {
+      let col; // 이 칸의 열 이름 (열 팁을 맞춰 볼 때 처음 한 번 계산)
+      const column = () => col !== undefined ? col : (col = columnOf(e));
+      for (const tip of tips) {
+        const f = tip.find;
+        if ((f.button && e.matches('input[type=button], input[type=submit], button') && norm(label(e)) === norm(f.button)) ||
+          (f.menu && e.matches('#snb a[title]') && e.title === f.menu) ||
+          (f.column && e.matches('th, td') && column() === norm(f.column)) ||
+          (f.selector && e.matches(f.selector))) return { tip, el: e };
+      }
+    }
     return null;
   };
   // 팁이 가리키는 화면 요소 (튜토리얼에서 강조할 때)
@@ -74,19 +82,76 @@ window.SG = (() => {
     e.append(...kids);
     return e;
   };
-  let lit = null, bubbleEl = null, modalEl = null;
-  const highlight = target => {
+  let bubbleEl = null, modalEl = null, hovered = null;
+  let lit = null; // 강조 중인 요소 { el, thin, prev: 원래 outline 값 }
+  // 보이는 화면 크기. innerWidth/innerHeight는 스크롤바까지 포함해서 그 기준으로 놓으면 가로 스크롤바가 생길 수 있다
+  const viewW = () => document.documentElement.clientWidth;
+  const viewH = () => document.documentElement.clientHeight;
+  // 요소에서 실제로 보이는 부분: 화면과 스크롤되는 조상(.grid-wrap 등)에 잘린 부분을 뺀다. 안 보이면 null
+  const shownRect = t => {
+    let { left, top, right, bottom } = t.getBoundingClientRect();
+    [left, top, right, bottom] = [Math.max(left, 0), Math.max(top, 0), Math.min(right, viewW()), Math.min(bottom, viewH())];
+    for (let p = t.parentElement; p && p !== document.body; p = p.parentElement) {
+      const s = getComputedStyle(p);
+      if (s.overflowX === 'visible' && s.overflowY === 'visible') continue;
+      const c = p.getBoundingClientRect(), l = c.left + p.clientLeft, tp = c.top + p.clientTop;
+      [left, top, right, bottom] = [Math.max(left, l), Math.max(top, tp), Math.min(right, l + p.clientWidth), Math.min(bottom, tp + p.clientHeight)];
+    }
+    return right > left && bottom > top ? { left, top, right, bottom } : null;
+  };
+  // 오른쪽 위 "?" 배지: 호버 중인 요소와 자유 팁에서 누른 요소에 붙인다. 확장 요소로 따로 띄우므로 표를 다시 그려도 남는 것이 없다
+  const badges = new Map(); // 화면 요소 → 배지
+  const placeBadges = () => badges.forEach((b, t) => {
+    const r = shownRect(t);
+    b.hidden = !r; // 스크롤로 화면 밖·표 밖으로 나간 요소는 배지를 숨긴다
+    if (!r) return;
+    b.style.left = Math.max(2, Math.min(r.right - 10, viewW() - 18)) + scrollX + 'px';
+    b.style.top = Math.max(2, r.top - 7) + scrollY + 'px';
+  });
+  // 페이지가 화면을 다시 그려 테두리 요소가 문서에서 빠지면 배지를 치운다 (누른 요소였으면 말풍선도 닫는다)
+  const gone = new MutationObserver(() => {
+    if (hovered && !hovered.isConnected) hover(null);
+    if (lit?.thin && !lit.el.isConnected) { unhighlight(); bubbleEl?.remove(); }
+  });
+  const syncBadges = () => {
+    const want = new Set([hovered, lit?.thin && lit.el].filter(Boolean));
+    badges.forEach((b, t) => { if (!want.has(t)) { b.remove(); badges.delete(t); } });
+    want.forEach(t => { if (!badges.has(t)) badges.set(t, document.body.appendChild(el('span', { className: 'sg-badge', textContent: '?' }))); });
+    if (badges.size) gone.observe(document.body, { childList: true, subtree: true }); else gone.disconnect();
+    placeBadges();
+  };
+  // 강조 테두리. thin이면 호버와 같은 모양(얇은 테두리 + 배지, 자유 팁에서 누른 요소), 아니면 굵게 (튜토리얼 단계)
+  const highlight = (target, thin = false) => {
     unhighlight();
     if (!target) return;
-    lit = [target, target.style.outline, target.style.outlineOffset];
+    lit = { el: target, thin, prev: [target.style.outline, target.style.outlineOffset] };
+    if (thin) { target.classList.add('sg-lit'); syncBadges(); return; }
     target.style.outline = '3px solid #f59e0b';
     target.style.outlineOffset = '2px';
   };
   const unhighlight = () => {
-    if (lit) [lit[0].style.outline, lit[0].style.outlineOffset] = [lit[1], lit[2]];
+    if (!lit) return;
+    const { el: t, thin, prev } = lit;
     lit = null;
+    if (thin) { t.classList.remove('sg-lit'); syncBadges(); }
+    else [t.style.outline, t.style.outlineOffset] = prev;
   };
-  // 말풍선: target 근처에 표시. buttons를 주면 누른 버튼 글자로 resolve
+  // 말풍선: target의 보이는 부분 아래(자리가 없으면 위)에 놓는다. 스크롤·창 크기 변경 때 다시 놓아 요소를 따라간다.
+  // target이 가려지면 숨긴다. 단 버튼이 있는 말풍선(튜토리얼)은 눌러야 넘어가므로 숨기지 않고 원래 위치 기준으로 둔다
+  let bubbleAt = null; // { el: 가리키는 요소, keep: 가려져도 보이게 둘지 }
+  const placeBubble = () => {
+    const box = bubbleEl, t = bubbleAt?.el;
+    if (!box?.isConnected || !t?.isConnected) return; // 요소가 문서에서 빠졌으면 마지막 자리에 둔다
+    const r = shownRect(t) || (bubbleAt.keep ? t.getBoundingClientRect() : null);
+    box.hidden = !r;
+    if (!r) return;
+    const below = r.bottom + box.offsetHeight + 12 < viewH();
+    box.style.left = Math.max(8, Math.min(r.left, viewW() - box.offsetWidth - 8)) + scrollX + 'px';
+    box.style.top = (below ? r.bottom + 8 : r.top - box.offsetHeight - 8) + scrollY + 'px';
+  };
+  // 배지·말풍선 다시 놓기: 확장이 켜져 있는 동안 스크롤(표 가로 스크롤 등 안쪽 스크롤 포함)·창 크기 변경 때 부른다
+  const place = () => { placeBadges(); placeBubble(); };
+  // buttons를 주면 누른 버튼 글자로 resolve
   const bubble = (target, { title = '', text = '', buttons: btns = [] }) => new Promise(done => {
     bubbleEl?.remove();
     const box = el('div', { className: 'sg-bubble' },
@@ -94,11 +159,9 @@ window.SG = (() => {
       el('p', { textContent: text }),
       ...(btns.length ? [el('div', { className: 'sg-row' }, ...btns.map(b => el('button', { className: 'sg-btn', textContent: b, onclick: () => { box.remove(); done(b); } })))] : []));
     document.body.append(box);
-    const r = target.getBoundingClientRect();
-    const below = r.bottom + box.offsetHeight + 12 < innerHeight;
-    box.style.left = Math.max(8, Math.min(r.left, innerWidth - box.offsetWidth - 8)) + scrollX + 'px';
-    box.style.top = (below ? r.bottom + 8 : r.top - box.offsetHeight - 8) + scrollY + 'px';
     bubbleEl = box;
+    bubbleAt = { el: target, keep: btns.length > 0 };
+    placeBubble();
   });
   // 모달: 화면 가운데. 누른 버튼 글자로 resolve
   const modal = ({ title = '', text = '', buttons: btns = ['확인'] }) => new Promise(done => {
@@ -111,18 +174,75 @@ window.SG = (() => {
     document.body.append(back);
     modalEl = back;
   });
+  // 마우스를 올린 요소에 얇은 테두리 + 오른쪽 위 "?" 배지 (자유 팁: 팁이 있는 요소만). null이면 지움.
+  // 화면 요소에는 class 하나만 붙였다 뗀다
+  const hover = target => {
+    target ||= null;
+    if (hovered === target) return;
+    hovered?.classList.remove('sg-hover');
+    hovered = target;
+    hovered?.classList.add('sg-hover');
+    syncBadges();
+  };
+  // 강조·말풍선·모달을 닫는다. 호버 테두리는 마우스를 따라가므로 그대로 둔다 (모드 종료 때 stop()이 지움)
   const clear = () => { unhighlight(); bubbleEl?.remove(); modalEl?.remove(); };
+
+  // 페이지 자체 호버 끄기 (자유 팁): 학교 CSS의 :hover 규칙과 마우스 올림 이벤트를 막고, 커서를 기본 화살표로 통일한다.
+  // :hover 규칙은 절대 맞지 않는 :not(*)로 바꿔 두었다가 끌 때 원래대로 되돌린다.
+  // mousemove·pointermove는 막지 않는다: 활동 감지(자동 로그아웃 연장) 스크립트가 쓸 수 있어서
+  const HOVER_EVENTS = ['mouseover', 'mouseout', 'mouseenter', 'mouseleave', 'pointerover', 'pointerout', 'pointerenter', 'pointerleave'];
+  // 마우스가 올라간 요소가 직접 눌러 보는 요소(tryable)이면 html에 sg-try를 붙여 손가락 커서를 준다 (판정은 tryable 한 곳에서만)
+  const stopHover = e => {
+    if (e.type === 'mouseover') document.documentElement.classList.toggle('sg-try', tryable(e.target));
+    if (!e.target.closest?.('[data-sg]')) e.stopPropagation();
+  };
+  let muted = null; // [규칙, 원래 선택자] 목록
+  const walk = list => {
+    for (const r of list) {
+      if (r.selectorText?.includes(':hover')) { muted.push([r, r.selectorText]); r.selectorText = r.selectorText.replace(/:hover\b/g, ':not(*)'); }
+      if (r.styleSheet) muteSheet(r.styleSheet); // @import한 CSS
+      if (r.cssRules) walk(r.cssRules); // @media 등 안쪽 규칙
+    }
+  };
+  const muteSheet = sheet => {
+    if (sheet.ownerNode?.dataset?.sg !== undefined) return;
+    try { walk(sheet.cssRules); } catch { /* 다른 출처 CSS는 읽을 수 없어 건너뜀 */ }
+  };
+  // 이미 바꾼 규칙에는 :hover가 없으므로 여러 번 불러도 된다
+  const muteAll = () => [...document.styleSheets, ...(document.adoptedStyleSheets || [])].forEach(muteSheet);
+  // 켠 뒤에 추가되는 CSS: <style>은 head에 붙을 때, <link>는 내려받은 뒤(load)에야 규칙을 읽을 수 있다
+  const lateCss = new MutationObserver(muteAll);
+  const onCssLoad = e => { if (e.target.tagName === 'LINK') muteAll(); };
+  const quiet = on => {
+    if (!on === !muted) return;
+    document.documentElement.classList.toggle('sg-quiet', on);
+    HOVER_EVENTS.forEach(t => (on ? addEventListener : removeEventListener)(t, stopHover, true));
+    (on ? addEventListener : removeEventListener)('load', onCssLoad, true);
+    if (on) { muted = []; muteAll(); lateCss.observe(document.head, { childList: true }); return; }
+    lateCss.disconnect();
+    document.documentElement.classList.remove('sg-try');
+    muted.forEach(([r, s]) => { r.selectorText = s; });
+    muted = null;
+  };
 
   // ---------- 실제 클릭 차단 ----------
   // 켜져 있는 동안 페이지 버튼은 기본적으로 전부 막는다. 모드가 allow(el)로 예외를 줄 수 있다.
-  // 모드가 없을 때는 메뉴 이동·조회·입력칸만 허용 (서버 상태를 바꾸지 않는 것만)
-  const SAFE = ['조회', '초기화', '▼상세조회'];
-  const idleAllow = e => !!e.closest('#snb a[title]') || e.matches('input[type=text], select, option') ||
-    (e.matches('input[type=button], button') && SAFE.includes(norm(label(e))));
+  // 직접 눌러 보는 요소: 설명보다 눌러 보는 게 빠른 것. 자유 팁에서도 누를 수 있고 팁이 뜨지 않는다 (위쪽 메뉴, 표 아래 페이지 링크, 상세조회↔일반조회)
+  const TRY = ['▼상세조회', '▲일반조회'];
+  // 누른 요소가 버튼 안쪽 글자·아이콘이어도 버튼으로 본다
+  const buttonOf = e => e?.closest?.('input[type=button], button');
+  const tryable = e => !!e?.closest?.('#snb a[title], #pagingPanel a') || TRY.includes(norm(label(buttonOf(e) || {})));
+  // 모드가 없을 때는 위 요소 + 조회·입력칸·선택칸만 허용 (서버 상태를 바꾸지 않는 것만)
+  const SAFE = ['조회', '초기화'];
+  const CHOICE = 'input[type=radio], input[type=checkbox]'; // 라디오·체크박스 (과목구분, 희망수업 과목 선택 등)
+  const idleAllow = e => tryable(e) || e.matches(`input[type=text], input:not([type]), select, option, ${CHOICE}`) ||
+    !!e.closest('label')?.control?.matches(CHOICE) ||
+    SAFE.includes(norm(label(buttonOf(e) || {})));
   const guard = e => {
     const m = modes[current];
-    // Esc: 모드가 escape()를 정의하면 그것만 부르고(예: 실전 재현은 메시지만 닫음), 없으면 모드 종료. 포커스가 확장 요소 안이어도 같다
-    if (e.type === 'keydown' && e.key === 'Escape') return m?.escape ? m.escape() : stop();
+    // Esc: 모드가 escape()를 정의하면 그것만 부르고(예: 실전 재현은 메시지만 닫음), 없으면 모드 종료.
+    // 모드가 없을 때는 떠 있는 모달(시작 실패 안내 등)만 닫는다. 포커스가 확장 요소 안이어도 같다
+    if (e.type === 'keydown' && e.key === 'Escape') return m?.escape ? m.escape() : current ? stop() : clear();
     if (bypass || e.target.closest?.('[data-sg]')) return;
     if (e.type === 'keydown' && e.key !== 'Enter') return; // 글자 입력은 허용, Enter 제출만 막음
     if (m ? m.allow?.(e.target, e) : idleAllow(e.target)) return;
@@ -134,15 +254,23 @@ window.SG = (() => {
   // ---------- 모드 · 패널 ----------
   // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()? })
   const register = (name, mode) => { modes[name] = mode; ui && renderPanel(); };
+  let runs = 0; // 시작할 때마다 1씩 늘린다. 늦게 실패한 이전 시작이 지금 켠 모드를 끄지 않게 한다
   const start = async name => {
     stop();
+    const run = ++runs;
     current = name;
     renderPanel();
-    try { await modes[name].start?.(); } catch (err) { console.warn(err); modal({ title: '시작할 수 없어요', text: String(err.message || err) }); }
+    try { await modes[name].start?.(); } catch (err) {
+      console.warn(err);
+      // 그사이 모드를 끄거나 다시 켰거나 확장을 껐으면 아무것도 하지 않는다
+      if (run !== runs || current !== name || !ui) return;
+      stop(); // 켜진 채 남으면 페이지 클릭이 계속 막힌다. stop()이 모달을 지우므로 먼저 부른다
+      modal({ title: '시작할 수 없어요', text: String(err.message || err) });
+    }
   };
   function stop() {
     if (!current) return;
-    try { modes[current].stop?.(); } finally { current = null; clear(); renderPanel(); }
+    try { modes[current].stop?.(); } finally { current = null; clear(); hover(null); renderPanel(); }
   }
   const renderPanel = () => {
     if (!ui) return;
@@ -166,12 +294,23 @@ window.SG = (() => {
     .sg-bubble p,.sg-modal p{margin:4px 0;white-space:pre-line}
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
-    .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}`;
+    .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+    .sg-hover,.sg-lit{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
+    .sg-badge{position:absolute;z-index:2147483645;width:16px;height:16px;border-radius:50%;background:#f59e0b;color:#fff;font:bold 11px/16px sans-serif;text-align:center;pointer-events:none;box-shadow:0 1px 3px #0005}
+    html.sg-quiet :not([data-sg],[data-sg] *){cursor:default !important}
+    html.sg-quiet .sg-hover.sg-hover,html.sg-quiet .sg-hover.sg-hover *{cursor:help !important}
+    html.sg-quiet.sg-try :not([data-sg],[data-sg] *){cursor:pointer !important}
+    html.sg-quiet :is(input,select,textarea,button):disabled{pointer-events:none}`;
+  // help 줄의 `*`: 테두리 요소 안의 글자·버튼도 바로 위 cursor:default를 받으므로 도움말 커서(운영체제 기본)를 같이 준다
+  // sg-try 줄: 직접 눌러 보는 요소 위에서는 손가락 커서 (stopHover가 sg-try를 붙였다 뗀다. 커서는 마우스 밑 요소 것만 보이므로 전체에 줘도 된다)
+  // 마지막 줄: disabled 칸·버튼은 클릭 이벤트가 아예 안 와서 팁이 안 뜬다 → 클릭을 부모로 넘겨 묶음 팁(.hakjeom-area, 열 팁 등)이 받게 한다.
+  //   자유 팁(sg-quiet)에서만 적용한다. 실전 재현 등은 실제 화면과 같아야 해서
 
   function toggle() {
     if (ui) {
       stop();
       EVENTS.forEach(t => removeEventListener(t, guard, true));
+      ['scroll', 'resize'].forEach(t => removeEventListener(t, place, true));
       ui.panel.remove(); ui.style.remove(); ui = null;
       return;
     }
@@ -179,12 +318,13 @@ window.SG = (() => {
     document.head.append(ui.style);
     document.body.append(ui.panel);
     EVENTS.forEach(t => addEventListener(t, guard, true));
+    ['scroll', 'resize'].forEach(t => addEventListener(t, place, true));
     renderPanel();
   }
 
   return {
     register, start, stop, toggle, get mode() { return current; },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
-    matchTip, tipEl, highlight, unhighlight, bubble, modal, clear, el,
+    matchTip, tryable, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, clear, el,
   };
 })();

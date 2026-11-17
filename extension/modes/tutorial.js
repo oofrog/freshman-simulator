@@ -1,31 +1,32 @@
 // 신입생 튜토리얼 모드 (#7, 담당: 최지범)
 // 어느 화면에서 시작해도 수강편람으로 이동한 뒤, STEPS를 차례로 강조하고 말풍선을 띄운다.
 //   수강편람 → 기본수업 → 희망수업 → 수강신청 → 신청내역 → 끝 모달
-// 말풍선 문구는 tips.js의 title·text를 그대로 쓴다. 진행과 조작 안내는 별도 패널에 표시한다.
+// 말풍선 문구는 tips.js의 title·text를 그대로 쓴다 (화면 이동 단계만 navTip의 이동 안내). 진행과 조작 안내는 별도 패널에 표시한다.
 (() => {
   // 단계 = [tips.js의 팁 id, 넘어가는 동작]
   //   'next'  말풍선의 [다음]  (두 번째로 보인 단계부터는 [이전]도 있어, 다른 화면의 단계면 그 화면으로 돌아간다)
   //   'click' 강조된 요소를 사용자가 직접 누름 (그 요소만 클릭 허용). 서버 상태를 바꾸지 않는 메뉴·[조회]에만 쓴다.
   //           메뉴 팁(find.menu)이면 그 화면으로 바뀔 때까지 기다린다.
   // 화면에 요소가 없으면 화면 제목 옆에서 같은 팁을 읽고 [다음]으로 진행한다.
+  // 화면 이동 단계: 왼쪽 메뉴는 자유 팁에서도 직접 눌러 이동하는 요소(SG.tryable)라 tips.js에 팁이 없다 (#19).
+  // 그래서 설명 대신 이동 안내만 보여 주고, 이 안내 문구는 tips.js가 아닌 여기(navTip)에 둔다
+  const move = name => [`menu:${name}`, 'click'];
   const STEPS = [
-    ['common.menu.pyunram', 'next'],
-    ['pyunram.filter', 'next'],
-    ['pyunram.search', 'click'],
+    ['pyunram.search', 'click'], // 검색 조건을 바꿔 본 뒤 [조회]를 직접 누름
     ['common.col.no', 'next'],
     ['common.col.code', 'next'],
     ['common.col.seat', 'next'],
     ['common.col.limit', 'next'],
-    ['common.menu.basic', 'click'],
+    move('기본수업'),
     ['basic.apply', 'next'],
     ['basic.hopeAdd', 'next'],
-    ['common.menu.hope', 'click'],
+    move('희망수업'),
     ['hope.cap', 'next'],
     ['hope.hope', 'next'],
     ['hope.apply', 'next'],
-    ['common.menu.apply', 'click'],
+    move('수강신청'),
     ['apply.apply', 'next'],
-    ['common.menu.done', 'click'],
+    move('신청내역'),
     ['done.cancel', 'next'],
     ['done.type', 'next'],
   ];
@@ -136,7 +137,14 @@
     Object.assign(box.style, to, { opacity: '1' });
   };
 
-  const tipOf = id => SG.tips.find(t => t.id === id);
+  // 화면 이동 단계의 안내 (팁 데이터가 아님). 같은 단계면 같은 객체를 돌려준다
+  const navTips = {};
+  const navTip = name => navTips[name] ||= {
+    id: `menu:${name}`, screen: '공통', find: { menu: name }, nav: true,
+    title: `${name}으로 이동`, text: `왼쪽 메뉴에서 [${name}]을 직접 눌러 보세요.`,
+  };
+  // 단계 id → 팁 (화면 이동 단계는 navTip, 나머지는 tips.js)
+  const tipOf = id => id.startsWith('menu:') ? navTip(id.slice(5)) : SG.tips.find(t => t.id === id);
   // 단계마다 그 단계를 보여 줄 화면: 수강편람에서 시작해 메뉴를 누르는 단계 다음부터 그 메뉴의 화면
   const screensOf = steps => {
     let at = FIRST;
@@ -149,7 +157,7 @@
 
   SG.register('tutorial', {
     label: '튜토리얼',
-    steps: STEPS, screensOf, // 판정 스크립트(test/tutorial.test.js)가 읽음
+    steps: STEPS, screensOf, tipOf, // 판정 스크립트(test/tutorial*.test.js)가 읽음
     async start() {
       const me = ++run, alive = () => me === run;
       const cancelled = new Promise(done => { cancel = done; });
@@ -216,13 +224,14 @@
           const go = direct && tip.find.menu; // 다음 화면으로 넘어가는 단계
           const back = i ? ['이전'] : [];
           const next = i === STEPS.length - 1 ? '완료' : '다음';
-          filter = found && ['pyunram.filter', 'apply.filter'].includes(id) ? found : null;
+          // [조회] 단계에서는 그 버튼이 든 검색 영역의 조건 칸도 바꿔 볼 수 있다 (검색 영역 팁은 #16에서 지움)
+          filter = found && id === 'pyunram.search' ? found.closest?.('.search-box') || null : null;
           el.scrollIntoView({ block: 'nearest', inline: 'center' });
           ring.classList.toggle('act', direct); // 직접 누를 곳이면 다른 모양으로
           fly(el); // 테두리와 말풍선이 함께 다음 요소로 이동 (core의 outline 강조 대신)
           show(i, !found ? `현재 화면에는 이 항목이 없어요. 설명을 읽고 [${next}] 버튼을 눌러 주세요.`
+            : filter ? '검색 조건을 바꿔 볼 수 있어요. 준비되면 강조된 [조회]를 직접 눌러 보세요.'
             : direct ? `강조된 [${tip.find.menu || tip.find.button}]를 직접 눌러 보세요.`
-            : filter ? '검색 조건을 바꿔 볼 수 있어요. 준비되면 [다음]을 눌러 주세요.'
             : `강조된 항목의 설명을 읽고 [${next}] 버튼을 눌러 주세요.`);
           const bubble = SG.bubble(el, { title: tip.title, text: tip.text, buttons: direct ? back : [...back, next] });
           markButtons();
