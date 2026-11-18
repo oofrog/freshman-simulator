@@ -31,5 +31,7 @@
       SG.highlight(hit.el, true); // 호버와 같은 모양 (얇은 테두리 + 배지)
       SG.bubble(hit.el, { title: hit.tip.title, text: hit.tip.text });
     },
+    // Esc: 떠 있는 말풍선·시작 안내를 닫는다 (모드는 계속). 둘 다 답을 기다리지 않으므로 그냥 지운다
+    escape() { SG.clear(); },
   });
 })();

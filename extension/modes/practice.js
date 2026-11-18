@@ -20,12 +20,10 @@
   const REAL_LOOK = { wrap: 'btn_common_wrap btn_blue_wrap btn_small_wrap', btn: 'btn_common btn_blue btn_small' };
 
   const CSS = `
-    .sg-count{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;background:#111827;color:#fff;border-radius:8px;padding:8px 18px;font-size:15px;font-weight:bold;box-shadow:0 4px 12px #0004}
     .sg-sys[data-sg]{position:fixed;inset:0;z-index:2147483645;font:inherit;color:inherit}
     .sg-sys .ui-widget-overlay{position:absolute;inset:0}
     .sg-sys .ui-dialog{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:300px}
     .sg-sys .ui-dialog-content{min-height:55px}
-    .sg-count .sg-btn{margin-left:12px;background:#fff;color:#111827;font-weight:bold}
     .sg-wait[data-sg]{position:fixed;inset:0;z-index:2147483645;background:#0005;display:flex;align-items:center;justify-content:center}
     .sg-wait-box{width:320px;max-width:calc(100vw - 32px);background:#fff;border-radius:8px;padding:20px;text-align:center;box-shadow:0 8px 24px #0005}
     .sg-wait-box p{margin:8px 0}
@@ -196,20 +194,14 @@
     me.extras.push(box);
   };
 
+  // 카운트다운·[연습 끝내기]는 core 상태 바(SG.bar)에 표시한다
   const run = me => {
-    const banner = SG.el('div', { className: 'sg-count' });
-    document.body.append(banner);
-    me.extras.push(banner);
     me.openAt = performance.now() + COUNTDOWN * 1000;
     // 숫자가 바뀌는 순간에 맞춰 다시 부른다. 인기 과목은 0.3초쯤에 마감되므로 '시작!'이 늦게 뜨면 안 된다
     const tick = () => {
       const t = elapsed(me);
-      if (t >= 0) {
-        banner.textContent = '수강신청 시작!';
-        banner.append(SG.el('button', { className: 'sg-btn', textContent: '연습 끝내기', onclick: () => finish(me) }));
-        return;
-      }
-      banner.textContent = `수강신청 시작까지 ${Math.ceil(-t)}초`;
+      if (t >= 0) return SG.bar({ text: '수강신청 시작!', buttons: [['연습 끝내기', () => finish(me)]] });
+      SG.bar({ text: `수강신청 시작까지 ${Math.ceil(-t)}초` });
       me.timer = setTimeout(tick, (-t % 1 || 1) * 1000 + 1);
     };
     tick();
@@ -217,7 +209,6 @@
 
   SG.register('practice', {
     label: '실전 재현',
-    ownBar: true, // 카운트다운·[연습 끝내기] 바를 직접 그리므로 core 상태 바는 숨김
     async start() {
       if (SG.screen() !== '희망수업') {
         SG.goMenu('희망수업');

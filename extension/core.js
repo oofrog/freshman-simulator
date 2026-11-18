@@ -186,6 +186,12 @@ window.SG = (() => {
   };
   // 강조·말풍선·모달을 닫는다. 호버 테두리는 마우스를 따라가므로 그대로 둔다 (모드 종료 때 stop()이 지움)
   const clear = () => { unhighlight(); bubbleEl?.remove(); modalEl?.remove(); };
+  // Esc 기본 처리: 버튼이 하나뿐인 모달은 그 버튼을 누른 것과 같게 닫는다 (예: 시작 실패 안내 → 확장도 꺼짐).
+  // 고를 버튼이 여럿인 모달과 말풍선은 모드가 답을 기다리거나 설명 중일 수 있어 건드리지 않는다 (말풍선을 닫을 모드는 escape()에서)
+  const dismiss = () => {
+    const btns = modalEl?.isConnected ? modalEl.querySelectorAll('.sg-row button') : [];
+    if (btns.length === 1) btns[0].click();
+  };
 
   // 페이지 자체 호버 끄기 (자유 팁): 학교 CSS의 :hover 규칙과 마우스 올림 이벤트를 막고, 커서를 기본 화살표로 통일한다.
   // :hover 규칙은 절대 맞지 않는 :not(*)로 바꿔 두었다가 끌 때 원래대로 되돌린다.
@@ -231,44 +237,45 @@ window.SG = (() => {
   const TRY = ['▼상세조회', '▲일반조회'];
   // 누른 요소가 버튼 안쪽 글자·아이콘이어도 버튼으로 본다
   const buttonOf = e => e?.closest?.('input[type=button], button');
-  const tryable = e => !!e?.closest?.('#snb a[title], #pagingPanel a') || TRY.includes(norm(label(buttonOf(e) || {})));
-  // 모드가 없을 때는 위 요소 + 조회·입력칸·선택칸만 허용 (서버 상태를 바꾸지 않는 것만)
-  const SAFE = ['조회', '초기화'];
-  const CHOICE = 'input[type=radio], input[type=checkbox]'; // 라디오·체크박스 (과목구분, 희망수업 과목 선택 등)
-  const idleAllow = e => tryable(e) || e.matches(`input[type=text], input:not([type]), select, option, ${CHOICE}`) ||
-    !!e.closest('label')?.control?.matches(CHOICE) ||
-    SAFE.includes(norm(label(buttonOf(e) || {})));
+  // aria-disabled 메뉴(목업에서 만들지 않은 화면)는 눌러도 아무 일이 없으므로 직접 눌러 보는 요소로 보지 않는다
+  const tryable = e => !!e?.closest?.('#snb a[title]:not([aria-disabled=true]), #pagingPanel a') || TRY.includes(norm(label(buttonOf(e) || {})));
   const guard = e => {
     const m = modes[current];
-    // Esc: 패널이 열려 있으면 패널만 닫는다. 아니면 모드가 escape()를 정의했을 때 그것만 부르고(예: 실전 재현은 메시지만 닫음),
-    // 없으면 모드와 확장을 끈다. 모드 없이 떠 있는 모달(시작 실패 안내)이면 모달을 닫고 확장도 끈다. 포커스가 확장 요소 안이어도 같다
-    if (e.type === 'keydown' && e.key === 'Escape') return panelOpen() ? closePanel() : m?.escape ? m.escape() : current ? stop() : (clear(), off());
-    if (bypass || e.target.closest?.('[data-sg]')) return;
-    // 패널이 열려 있을 때 페이지를 누르면 그 누름은 막고 패널만 닫는다 (팝업처럼 닫히면서 실제 버튼이 눌리지 않게)
-    if (panelOpen() && e.type !== 'keydown') {
+    // Esc: 맨 위에 떠 있는 것 하나만 닫는다. 모드는 끄지 않는다 (끄기는 [끝내기] 등 버튼으로만). 포커스가 확장 요소 안이어도 같다
+    // 패널이 열려 있으면 패널, 아니면 모드가 escape()를 정의했을 때 그것만(예: 실전 재현은 메시지만 닫음), 없으면 dismiss()
+    if (e.type === 'keydown' && e.key === 'Escape') return panelOpen() ? closePanel() : m?.escape ? m.escape() : dismiss();
+    if (bypass) return;
+    // 패널이 열려 있을 때 패널 밖을 누르면 그 누름은 막고 패널만 닫는다 (팝업처럼 닫히면서 실제 버튼이 눌리지 않게).
+    // 확장 요소(가짜 [신청], 말풍선, 상태 바 등)도 페이지와 똑같이 막는다
+    if (panelOpen() && e.type !== 'keydown' && !ui.panel.contains(e.target)) {
       e.preventDefault();
       e.stopImmediatePropagation();
       if (e.type === 'click') closePanel();
       return;
     }
+    if (e.target.closest?.('[data-sg]')) return;
     if (e.type === 'keydown' && e.key !== 'Enter') return; // 글자 입력은 허용, Enter 제출만 막음
-    if (m ? m.allow?.(e.target, e) : idleAllow(e.target)) return;
+    // 모드가 없으면(패널이 열려 있음·시작 실패 안내·패널을 닫고 확장이 꺼지기 전 0.5초) 전부 막는다
+    if (m?.allow?.(e.target, e)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     if (e.type === 'click') m?.blocked?.(e.target, e);
   };
 
   // ---------- 모드 · 패널 ----------
-  // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()?, ownBar? })
+  // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()? })
   // 패널은 확장 팝업처럼 동작: 아이콘으로 열고, 바깥을 누르거나 모드를 시작하면 닫힌다. 모드 없이 닫히면 확장도 꺼진다.
-  // 모드 중에는 위쪽 가운데 상태 바(모드 이름 + [끝내기])가 뜬다. 모드가 자기 바를 그리면(ownBar) core 바는 숨긴다
+  // 모드 중에는 위쪽 가운데 상태 바가 뜬다. 기본은 '모드 이름 중' + [끝내기]이고, 모드가 SG.bar()로 내용을 바꾸거나 숨길 수 있다
   const register = (name, mode) => { modes[name] = mode; ui && renderPanel(); };
   let runs = 0; // 시작할 때마다 1씩 늘린다. 늦게 실패한 이전 시작이 지금 켠 모드를 끄지 않게 한다
   const start = async name => {
+    // 없는 모드 이름(목업 ?sg= 오타, 콘솔 등)이면 아무것도 바꾸지 않는다. 팝업은 등록된 이름만 보낸다
+    if (!modes[name]) return console.warn(`SG: '${name}' 모드가 없어요. 있는 모드: ${Object.keys(modes).join(', ')}`);
     stopMode();
     if (!ui) on(); // 켜지지 않은 채 시작하면 클릭 차단이 없으므로 먼저 켠다
     const run = ++runs;
     current = name;
+    barSpec = undefined;
     ui.panel.hidden = true;
     renderPanel();
     renderBar();
@@ -283,13 +290,20 @@ window.SG = (() => {
   };
   function stopMode() {
     if (!current) return;
-    try { modes[current].stop?.(); } finally { current = null; clear(); hover(null); renderPanel(); renderBar(); }
+    try { modes[current].stop?.(); } finally { current = null; barSpec = undefined; clear(); hover(null); renderPanel(); renderBar(); }
   }
-  // 모드를 끝내면 확장도 끈다 (Esc·[끝내기]·모드가 스스로 끝날 때). 다시 쓰려면 아이콘
-  function stop() { stopMode(); off(); }
+  // 모드를 끝내면 확장도 끈다 ([끝내기]·모드가 스스로 끝날 때). 다시 쓰려면 아이콘. 모드 정리는 off()가 한다
+  function stop() { off(); }
   const panelOpen = () => !!ui && !ui.panel.hidden;
   const showPanel = () => { ui.panel.hidden = false; renderPanel(); };
-  const closePanel = () => { ui.panel.hidden = true; if (!current) off(); };
+  // 모드 없이 닫히면 확장을 끄되 잠깐 늦춘다: 바깥 클릭으로 닫을 때 더블클릭의 두 번째 클릭까지 막히게 (더블클릭 간격 ≈ 0.5초).
+  // 그사이 패널을 다시 열거나 모드를 시작하면 끄지 않는다
+  let offTimer = 0;
+  const closePanel = () => {
+    ui.panel.hidden = true;
+    clearTimeout(offTimer);
+    if (!current) offTimer = setTimeout(() => { if (!current && !panelOpen()) off(); }, 500);
+  };
   const renderPanel = () => {
     if (!ui) return;
     ui.panel.replaceChildren(
@@ -297,26 +311,32 @@ window.SG = (() => {
       ...Object.entries(modes).map(([name, m]) =>
         el('button', { className: 'sg-btn' + (name === current ? ' on' : ''), textContent: m.label, onclick: () => name === current ? stop() : start(name) })));
   };
+  // 상태 바 내용: undefined면 기본, false면 숨김, { text, buttons: [[글자, 누를 때 함수], ...] }면 그 내용 (buttons를 빼면 버튼 없음).
+  // 모드를 시작하거나 끝내면 기본으로 돌아간다
+  let barSpec;
   const renderBar = () => {
     if (!ui) return;
     const m = modes[current];
-    ui.bar.hidden = !m || !!m.ownBar;
+    ui.bar.hidden = !m || barSpec === false;
     if (ui.bar.hidden) return;
+    const { text, buttons = [] } = barSpec || { text: `${m.label} 중`, buttons: [['끝내기', () => stop()]] };
     ui.bar.replaceChildren(
-      el('span', { textContent: `${m.label} 중` }),
-      el('small', { textContent: 'Esc로 끝내기' }),
-      el('button', { className: 'sg-btn', textContent: '끝내기', onclick: () => stop() }));
+      el('span', { textContent: text }),
+      ...buttons.map(([label, onclick]) => el('button', { className: 'sg-btn', textContent: label, onclick })));
   };
+  // 모드가 상태 바를 바꿀 때: SG.bar({ text: '수강신청 시작까지 3초' }), SG.bar({ text, buttons: [['연습 끝내기', fn]] }),
+  // SG.bar(false)(숨김, 자기 패널을 그리는 튜토리얼), SG.bar()(기본으로)
+  const bar = spec => { barSpec = spec; renderBar(); };
   const CSS = `
     [data-sg]{font:13px/1.5 sans-serif;color:#111;box-sizing:border-box}
-    .sg-panel{position:fixed;top:12px;right:12px;z-index:2147483646;background:#fff;border:2px solid #2563eb;border-radius:10px;padding:10px;width:200px;box-shadow:0 4px 16px #0003;display:flex;flex-direction:column;gap:6px}
+    .sg-panel{position:fixed;top:12px;right:12px;z-index:2147483647;background:#fff;border:2px solid #2563eb;border-radius:10px;padding:10px;width:200px;box-shadow:0 4px 16px #0003;display:flex;flex-direction:column;gap:6px}
     .sg-panel[hidden],.sg-bar[hidden]{display:none}
     .sg-bar{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:12px;white-space:nowrap;background:#111827;border-radius:8px;padding:8px 18px;box-shadow:0 4px 12px #0004}
     .sg-bar span{color:#fff;font-size:15px;font-weight:bold}
-    .sg-bar small{margin-left:-6px;color:#9ca3af;font-size:12px}
     .sg-bar .sg-btn{background:#fff;color:#111827;font-weight:bold}
     .sg-btn{all:unset;cursor:pointer;padding:5px 10px;border-radius:6px;background:#eef2ff;color:#1e3a8a;text-align:center;font:13px/1.5 sans-serif}
     .sg-btn.on{background:#2563eb;color:#fff}
+    .sg-btn.off{background:#f3f4f6;color:#444}
     .sg-bubble{position:absolute;z-index:2147483646;max-width:300px;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;box-shadow:0 4px 12px #0004}
     .sg-bubble *{color:#fff}
     .sg-bubble .sg-btn{color:#1e3a8a}
@@ -345,10 +365,15 @@ window.SG = (() => {
   }
   function off() {
     if (!ui) return;
-    stopMode();
-    EVENTS.forEach(t => removeEventListener(t, guard, true));
-    ['scroll', 'resize'].forEach(t => removeEventListener(t, place, true));
-    ui.panel.remove(); ui.bar.remove(); ui.style.remove(); ui = null;
+    clearTimeout(offTimer);
+    // 모드의 stop()이 예외를 던져도 클릭 차단 해제와 패널·바 제거는 반드시 한다 (클릭만 막힌 채 남지 않게). 예외는 콘솔에 그대로 남긴다
+    // clear(): 모드 없이 떠 있던 모달(시작 실패 안내)도 지운다. stopMode()는 모드가 없으면 아무것도 안 하고, CSS가 빠지면 모달이 맨 아래에 남는다
+    try { stopMode(); } finally {
+      clear();
+      EVENTS.forEach(t => removeEventListener(t, guard, true));
+      ['scroll', 'resize'].forEach(t => removeEventListener(t, place, true));
+      ui.panel.remove(); ui.bar.remove(); ui.style.remove(); ui = null;
+    }
   }
   // 목업의 확장 켜기 버튼: 꺼져 있으면 켜고 패널을 연다. 켜져 있으면 패널 열기↔닫기
   // (크롬 확장은 페이지 위 패널 대신 브라우저 팝업을 쓴다: popup.js가 SG.modes를 읽고 SG.start·SG.stop을 부른다)
@@ -358,7 +383,7 @@ window.SG = (() => {
   }
 
   return {
-    register, start, stop, toggle, get mode() { return current; },
+    register, start, stop, toggle, bar, get mode() { return current; },
     get modes() { return Object.entries(modes).map(([name, m]) => ({ name, label: m.label })); },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
     matchTip, tryable, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, clear, el,
