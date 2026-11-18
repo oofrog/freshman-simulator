@@ -186,6 +186,12 @@ window.SG = (() => {
   };
   // 강조·말풍선·모달을 닫는다. 호버 테두리는 마우스를 따라가므로 그대로 둔다 (모드 종료 때 stop()이 지움)
   const clear = () => { unhighlight(); bubbleEl?.remove(); modalEl?.remove(); };
+  // Esc 기본 처리: 버튼이 하나뿐인 모달은 그 버튼을 누른 것과 같게 닫는다 (예: 시작 실패 안내 → 확장도 꺼짐).
+  // 고를 버튼이 여럿인 모달과 말풍선은 모드가 답을 기다리거나 설명 중일 수 있어 건드리지 않는다 (말풍선을 닫을 모드는 escape()에서)
+  const dismiss = () => {
+    const btns = modalEl?.isConnected ? modalEl.querySelectorAll('.sg-row button') : [];
+    if (btns.length === 1) btns[0].click();
+  };
 
   // 페이지 자체 호버 끄기 (자유 팁): 학교 CSS의 :hover 규칙과 마우스 올림 이벤트를 막고, 커서를 기본 화살표로 통일한다.
   // :hover 규칙은 절대 맞지 않는 :not(*)로 바꿔 두었다가 끌 때 원래대로 되돌린다.
@@ -240,9 +246,9 @@ window.SG = (() => {
     SAFE.includes(norm(label(buttonOf(e) || {})));
   const guard = e => {
     const m = modes[current];
-    // Esc: 패널이 열려 있으면 패널만 닫는다. 아니면 모드가 escape()를 정의했을 때 그것만 부르고(예: 실전 재현은 메시지만 닫음),
-    // 없으면 모드와 확장을 끈다. 모드 없이 떠 있는 모달(시작 실패 안내)이면 모달을 닫고 확장도 끈다. 포커스가 확장 요소 안이어도 같다
-    if (e.type === 'keydown' && e.key === 'Escape') return panelOpen() ? closePanel() : m?.escape ? m.escape() : current ? stop() : (clear(), off());
+    // Esc: 맨 위에 떠 있는 것 하나만 닫는다. 모드는 끄지 않는다 (끄기는 [끝내기] 등 버튼으로만). 포커스가 확장 요소 안이어도 같다
+    // 패널이 열려 있으면 패널, 아니면 모드가 escape()를 정의했을 때 그것만(예: 실전 재현은 메시지만 닫음), 없으면 dismiss()
+    if (e.type === 'keydown' && e.key === 'Escape') return panelOpen() ? closePanel() : m?.escape ? m.escape() : dismiss();
     if (bypass || e.target.closest?.('[data-sg]')) return;
     // 패널이 열려 있을 때 페이지를 누르면 그 누름은 막고 패널만 닫는다 (팝업처럼 닫히면서 실제 버튼이 눌리지 않게)
     if (panelOpen() && e.type !== 'keydown') {
@@ -285,7 +291,7 @@ window.SG = (() => {
     if (!current) return;
     try { modes[current].stop?.(); } finally { current = null; clear(); hover(null); renderPanel(); renderBar(); }
   }
-  // 모드를 끝내면 확장도 끈다 (Esc·[끝내기]·모드가 스스로 끝날 때). 다시 쓰려면 아이콘
+  // 모드를 끝내면 확장도 끈다 ([끝내기]·모드가 스스로 끝날 때). 다시 쓰려면 아이콘
   function stop() { stopMode(); off(); }
   const panelOpen = () => !!ui && !ui.panel.hidden;
   const showPanel = () => { ui.panel.hidden = false; renderPanel(); };
@@ -304,7 +310,6 @@ window.SG = (() => {
     if (ui.bar.hidden) return;
     ui.bar.replaceChildren(
       el('span', { textContent: `${m.label} 중` }),
-      el('small', { textContent: 'Esc로 끝내기' }),
       el('button', { className: 'sg-btn', textContent: '끝내기', onclick: () => stop() }));
   };
   const CSS = `
@@ -313,7 +318,6 @@ window.SG = (() => {
     .sg-panel[hidden],.sg-bar[hidden]{display:none}
     .sg-bar{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:12px;white-space:nowrap;background:#111827;border-radius:8px;padding:8px 18px;box-shadow:0 4px 12px #0004}
     .sg-bar span{color:#fff;font-size:15px;font-weight:bold}
-    .sg-bar small{margin-left:-6px;color:#9ca3af;font-size:12px}
     .sg-bar .sg-btn{background:#fff;color:#111827;font-weight:bold}
     .sg-btn{all:unset;cursor:pointer;padding:5px 10px;border-radius:6px;background:#eef2ff;color:#1e3a8a;text-align:center;font:13px/1.5 sans-serif}
     .sg-btn.on{background:#2563eb;color:#fff}
