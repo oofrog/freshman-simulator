@@ -174,14 +174,6 @@ SG.tips = [
     source: 'Figma N17 | 실제 화면 표시 확인',
   },
   // ---------- 수강편람 (Figma 02) — 표 열 설명은 다른 화면에도 같은 열이 있어 맨 아래 공통 열로 ----------
-  {
-    id: 'pyunram.filter',
-    screen: '수강편람',
-    find: { selector: '.search-box' },
-    title: '검색 필터',
-    text: '원하는 조건으로 수업을 찾을 수 있어요. 조건을 고른 뒤 [조회]를 눌러 주세요.',
-    source: 'Figma 01 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
-  },
   // 파랑: 생략 검토 중
   {
     id: 'pyunram.search',
@@ -443,14 +435,6 @@ SG.tips = [
     title: '공통과목 학과과목',
     text: '공통과목과 학과과목 등 검색 범위를 고르는 항목이에요. 졸업학점 인정 여부는 본인의 교육과정에서 따로 확인해 주세요.',
     source: 'Figma A07 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
-  },
-  {
-    id: 'apply.filter',
-    screen: '수강신청',
-    find: { selector: '.search-box' },
-    title: '검색 조건',
-    text: '조직·연도·학기·학년·과목명 등의 조건으로 수업을 찾을 수 있어요. ERICA와 원하는 학기가 맞는지 먼저 확인해 주세요.',
-    source: 'Figma A02 | ERICA 수강신청 프로그램 이용방법, 실제 화면 표시 확인',
   },
   // 파랑: 생략 검토 중
   {
