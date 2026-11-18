@@ -1,6 +1,6 @@
 // 자동 검사: PR마다 GitHub Actions에서 돌고, 로컬에서는 `node scripts/check.js`로 돌린다.
 // 1) extension/ JS 문법  2) manifest.json  3) files.js 목록의 파일이 있는지
-// 4) README 원칙: 외부 요청 금지, chrome.*은 background.js에서만
+// 4) README 원칙: 외부 요청 금지, chrome.*은 popup.js에서만
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
@@ -43,10 +43,10 @@ const FORBIDDEN = [
   [/\bsendBeacon\b/, 'sendBeacon (외부 요청 금지)'],
   [/\bEventSource\b/, 'EventSource (외부 요청 금지)'],
 ];
-const CHROME = [/\bchrome\s*(\?\.|\.|\[)/, 'chrome.* (background.js에서만 사용)'];
+const CHROME = [/\bchrome\s*(\?\.|\.|\[)/, 'chrome.* (popup.js에서만 사용)'];
 
 for (const f of jsFiles) {
-  const rules = rel(f) === 'extension/background.js' ? FORBIDDEN : [...FORBIDDEN, CHROME];
+  const rules = rel(f) === 'extension/popup.js' ? FORBIDDEN : [...FORBIDDEN, CHROME];
   stripComments(fs.readFileSync(f, 'utf8')).split('\n').forEach((line, i) => {
     for (const [re, msg] of rules) {
       if (re.test(line)) errors.push(`${rel(f)}:${i + 1} ${msg}\n  ${line.trim()}`);

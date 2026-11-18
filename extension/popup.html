@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- 툴바 아이콘을 누르면 뜨는 브라우저 팝업 (목업은 이 대신 페이지 위 패널을 쓴다). 동작은 popup.js -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; width: 200px; padding: 10px; font: 13px/1.5 sans-serif; color: #111; display: flex; flex-direction: column; gap: 6px; }
+  h1 { margin: 0 0 2px; display: flex; align-items: center; gap: 6px; font-size: 16px; }
+  h1 img { width: 24px; height: 24px; }
+  button { all: unset; cursor: pointer; padding: 5px 10px; border-radius: 6px; background: #eef2ff; color: #1e3a8a; text-align: center; }
+  button:hover, button:focus-visible { background: #e0e7ff; }
+  button.on { background: #2563eb; color: #fff; }
+  p { margin: 0; color: #6b7280; white-space: pre-line; }
+  p:empty { display: none; }
+</style>
+</head>
+<body>
+<h1><img src="icons/icon48.png" alt="">신입생 시뮬레이터</h1>
+<div id="modes" style="display: contents"></div>
+<p id="msg"></p>
+<script src="files.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
