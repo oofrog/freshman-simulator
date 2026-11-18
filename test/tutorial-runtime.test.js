@@ -292,6 +292,19 @@ test('열·이동 메뉴·마지막 요소가 없어도 원문을 생략하지 �
   }
 });
 
+test('건너뛰는 단계(skip)는 요소가 없으면 앞으로도 뒤로도 지나간다', async () => {
+  const h = setup();
+  h.state.missing.add('basic.hopeAdd'); // 희망신청 기간이 아니라 칸이 없는 기본수업
+  await h.start();
+  const index = h.mode.steps.findIndex(([id]) => id === 'basic.apply');
+  for (let i = 0; i <= index; i++) { await h.advance(); await h.expire(); }
+  assert.equal(h.state.bubble.target.tip.id, 'menu:희망수업', '없는 희망신청 칸은 설명 없이 건너뜀');
+  await h.press('이전');
+  await h.expire();
+  assert.equal(h.state.bubble.target.tip.id, 'basic.apply', '이전도 없는 칸을 건너뜀');
+  h.SG.stop();
+});
+
 test('[조회] 단계는 검색 영역의 안전한 입력만 허용하고 신청 버튼과 Enter 제출은 차단한다', async () => {
   const h = setup();
   await h.start();
