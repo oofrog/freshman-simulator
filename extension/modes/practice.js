@@ -2,17 +2,21 @@
 // 희망수업의 [신청]을 가짜 버튼으로 바꾸고(이미 신청해서 버튼이 없는 행에도 넣음), 카운트다운 뒤 신청이 열린다.
 // 실제 화면처럼 남은 자리는 보여 주지 않고, 마감 여부는 [신청]을 눌렀을 때 메시지로만 알려 준다.
 // 시작 배너 옆의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 누른 시각과 마감 시각)을 띄운다.
+// 정원 말고도 같은 학수번호(다른 분반)·학점 초과·시간 중복이면 신청이 막힌다 (#6). 재수강은 지난 수강 기록이 없어 재현하지 않는다
 // 마감 시각·신청 판정·결과 요약 계산은 화면과 분리된 engine.js (SG.engine)
 // 메시지는 실제 화면의 "시스템 메시지"와 같은 모양으로 띄운다. 실제 화면 정리·아직 필요한 데이터: docs/real-screen.md
 (() => {
   const COUNTDOWN = 5; // 시작 전 카운트다운(초)
-  const { closeSec, judge, summarize, queueAt } = SG.engine;
+  const { closeSec, replay, summarize, queueAt, parseTimes } = SG.engine;
 
   // 신청 결과 문구는 서버가 보내 줘서 화면 코드에 없다. 실제 문구를 확인하기 전까지 임시.
   const MSG = {
     notOpen: '수강신청 기간이 아닙니다.',
     full: '정원이 초과되었습니다.',
     done: '수강신청이 완료되었습니다.',
+    same: '이미 신청한 과목입니다.', // 같은 학수번호의 다른 분반을 신청했을 때도
+    credit: max => `최대 신청학점(${max}학점)을 초과합니다.`,
+    time: '이미 신청한 과목과 수업시간이 중복됩니다.',
     queueClosed: '499 : 닫기 버튼을 클릭했습니다.', // 실제 문구 (포털 신청 코드 + 넷퍼넬 Close 코드 499)
   };
 
@@ -39,7 +43,7 @@
     .sg-result th,.sg-result td{border:1px solid #ddd;padding:4px 8px;text-align:center;font-size:12px}
     .sg-result th{background:#f3f4f6}
     .sg-result td.done{color:#15803d;font-weight:bold}
-    .sg-result td.full{color:#dc2626;font-weight:bold}
+    .sg-result td.full,.sg-result td.same,.sg-result td.credit,.sg-result td.time{color:#dc2626;font-weight:bold}
     .sg-result td.none{color:#888}`;
   // 목업처럼 jQuery UI 테마 CSS가 없는 화면에서만 넣는다 (값은 실제 화면에서 잰 것)
   const FALLBACK = `
@@ -57,12 +61,15 @@
     .sg-sys .ui-button-text{display:inline-block;padding:6px 10px;font-size:9pt;color:#656565}`;
   const hasTheme = () => [...document.styleSheets].some(sh => /jquery-ui/i.test(sh.href || ''));
 
-  // 진행 중인 연습: { rows, clicks, extras, dialog, timer, openAt, done, queue, left }
-  // openAt: 신청이 열리는 performance.now 시각 (카운트다운 전에는 0), clicks: 누른 기록 (엔진 summarize 형식), done: 결과 요약을 띄움
+  // 진행 중인 연습: { rows, clicks, extras, dialog, timer, openAt, done, queue, left, start, credits, creditBox, creditWas }
+  // openAt: 신청이 열리는 performance.now 시각 (카운트다운 전에는 0), clicks: 누른 기록 (엔진 replay·summarize 형식), done: 결과 요약을 띄움
   // queue: 대기 화면 타이머 (0이면 대기 중 아님), left: [닫기]로 나온 줄에 섰던 시각 (없으면 null)
+  // start: 엔진에 넘기는 { credits: 시작 때 신청학점, max: 최대학점 }, credits: 지금 신청학점, creditBox·creditWas: 신청학점 칸과 원래 값
   let s = null;
 
   const num = (tr, col) => parseInt((SG.cell(tr, col)?.textContent || '').replace(/\D/g, ''), 10);
+  const text = (tr, col) => SG.cell(tr, col)?.textContent.trim() || '';
+  const decimal = str => parseFloat(String(str).replace(/[^\d.]/g, '')); // 학점은 소수일 수도 있어 숫자·점만 남겨 읽는다
   const h = (tag, className, ...kids) => {
     const e = document.createElement(tag);
     e.className = className;
@@ -108,21 +115,28 @@
   // 신청이 열린 뒤 지난 시간(초). 열리기 전은 음수
   const elapsed = me => me.openAt ? (performance.now() - me.openAt) / 1000 : -Infinity;
 
-  // 대기열을 통과해 서버에 도착한 신청. 마감 여부는 줄을 선(누른) 시각으로 정한다. 마감이면 실제 화면처럼 [신청]이 그대로 남는다
+  // 대기열을 통과해 서버에 도착한 신청. 판정은 줄을 선(누른) 시각으로 하고, 기간 → 학수번호·학점·시간 → 정원 순서로 본다 (엔진 replay).
+  // 마감이나 막힌 신청은 실제 화면처럼 [신청]이 그대로 남는다
   const submit = (row, t) => {
     s.clicks.push({ course: s.rows.indexOf(row), t });
-    const result = judge(row.hope, row.cap, t);
-    if (result === 'done') row.fake.style.display = 'none'; // 실제 화면도 신청에 성공하면 그 행의 [신청] 버튼을 숨긴다
-    return sysMessage(MSG[result]);
+    const result = replay(s.rows, s.clicks, s.start).at(-1);
+    if (result === 'done') {
+      row.fake.style.display = 'none'; // 실제 화면도 신청에 성공하면 그 행의 [신청] 버튼을 숨기고
+      s.credits += row.credit;          // 학점 칸을 서버 값으로 바꾼다
+      if (s.creditBox) s.creditBox.value = String(s.credits);
+    }
+    const msg = MSG[result];
+    return sysMessage(typeof msg === 'function' ? msg(s.start.max) : msg);
   };
 
   const waitText = sec => sec < 60 ? '1분 이내' : `${Math.ceil(sec / 60)}분`;
 
-  // 대기 화면. 표시 항목(앞·뒤 대기 인원, 예상 시간, 진행률, 닫기)은 넷퍼넬 코드 기준이고, 모양과 글자는 실제 템플릿을 못 봐서 임시다.
+  // 대기 화면. 표시 항목(앞 대기 인원, 예상 시간, 진행률, 닫기)은 넷퍼넬 코드 기준이고, 모양과 글자는 실제 템플릿을 못 봐서 임시다.
+  // 넷퍼넬 코드에는 뒤 대기 인원도 있지만, 실제 수강신청 화면에서 본 적이 없어 띄우지 않는다 (2026-11-18 팀원 기억)
   // 줄을 끝까지 기다려야 서버로 간다. [닫기]로 나오면 자리를 잃고, 다시 누르면 그 시각에 맨 뒤로 새로 선다
   const enterQueue = (row, t, left) => {
     const me = s, first = queueAt(t).ahead, stayed = left === null ? first : queueAt(left, t).ahead;
-    const time = h('b', ''), ahead = h('b', ''), behind = h('b', ''), bar = h('div', 'sg-wait-bar');
+    const time = h('b', ''), ahead = h('b', ''), bar = h('div', 'sg-wait-bar');
     const leave = () => {
       clearTimeout(me.queue);
       me.queue = 0;
@@ -130,13 +144,13 @@
       sysMessage(MSG.queueClosed);
     };
     // 안내 문구는 실제 화면에 없는, 연습용으로 넣은 것
-    const note = first > stayed ? [h('p', 'sg-wait-note', `[닫기]로 줄에서 나와 맨 뒤로 다시 섰어요. 그대로 기다렸다면 앞에 ${stayed}명이었는데 지금은 ${first}명입니다.`)] : [];
+    const note = first > stayed ? [h('p', 'sg-wait-note', `[닫기]로 줄에서 나와 맨 뒤로 다시 섰어요. 그대로 기다렸다면 대기자 ${stayed}명이었는데 지금은 ${first}명입니다.`)] : [];
     const box = SG.el('div', { className: 'sg-wait' },
       h('div', 'sg-wait-box',
         h('b', '', '접속 대기 중입니다'),
         h('p', '', '예상 대기 시간 ', time),
         h('div', 'sg-wait-track', bar),
-        h('p', '', '앞 ', ahead, '명 · 뒤 ', behind, '명'),
+        h('p', '', '대기자 ', ahead, '명'),
         ...note,
         h('div', 'sg-row', SG.el('button', { className: 'sg-btn', textContent: '닫기', onclick: leave }))));
     me.dialog?.remove();
@@ -150,7 +164,6 @@
       }
       time.textContent = waitText(q.wait);
       ahead.textContent = q.ahead;
-      behind.textContent = q.behind;
       bar.style.width = `${q.progress}%`;
       me.queue = setTimeout(tick, 100);
     };
@@ -167,7 +180,9 @@
 
   // 결과 요약: 과목마다 결과·누른 시각·마감·차이. [다시 하기]는 처음부터, [닫기]는 연습을 끝내고 화면을 되돌린다
   // [연습 끝내기]에 포커스가 남아 Enter·Space로 다시 눌릴 수 있으므로 한 번만 띄운다
-  const RESULT = { done: '성공', full: '정원 초과', none: '안 누름' };
+  // 정원 초과·성공·안 누름은 늘 보이고, 학수번호·학점·시간으로 막힌 결과는 있을 때만 요약 줄에 보인다
+  const RESULT = { done: '성공', full: '정원 초과', same: '이미 신청', credit: '학점 초과', time: '시간 중복', none: '안 누름' };
+  const ALWAYS = ['done', 'full', 'none'];
   const sec = x => `${x.toFixed(2)}초`;
   const finish = me => {
     if (me.done) return;
@@ -175,11 +190,13 @@
     clearTimeout(me.queue);
     me.queue = 0;
     me.dialog?.remove();
-    const sum = summarize(me.rows, me.clicks);
+    const sum = summarize(me.rows, me.clicks, me.start);
     const count = k => sum.filter(r => r.result === k).length;
     const td = (text, className = '') => h('td', className, text);
     const lines = sum.map((r, i) => {
-      const gap = r.at === null || r.close === Infinity ? '—' : r.close > r.at ? `${sec(r.close - r.at)} 여유` : `${sec(r.at - r.close)} 늦음`;
+      // 여유·늦음은 자리를 두고 겨룬 결과(성공·정원 초과)에만. 막힌 신청은 마감과 상관없다
+      const gap = r.at === null || r.close === Infinity || !['done', 'full'].includes(r.result) ? '—'
+        : r.close > r.at ? `${sec(r.close - r.at)} 여유` : `${sec(r.at - r.close)} 늦음`;
       return h('tr', '', td(me.rows[i].label), td(RESULT[r.result], r.result), td(r.at === null ? '—' : sec(r.at)),
         td(r.close === Infinity ? '안 참' : sec(r.close)), td(gap));
     });
@@ -187,7 +204,7 @@
     const box = SG.el('div', { className: 'sg-result' },
       h('div', 'sg-box',
         h('b', '', '연습 결과'),
-        h('p', '', `성공 ${count('done')}과목 · 정원 초과 ${count('full')}과목 · 안 누름 ${count('none')}과목`),
+        h('p', '', Object.keys(RESULT).filter(k => ALWAYS.includes(k) || count(k)).map(k => `${RESULT[k]} ${count(k)}과목`).join(' · ')),
         h('table', '',
           h('thead', '', h('tr', '', ...['과목', '결과', '누른 시각 (시작 후)', '마감', '차이'].map(t => h('th', '', t)))),
           h('tbody', '', ...lines)),
@@ -222,7 +239,7 @@
         SG.goMenu('희망수업');
         await SG.waitFor(() => SG.screen() === '희망수업' && SG.grid());
       }
-      const me = s = { rows: [], clicks: [], extras: [], dialog: null, timer: 0, openAt: 0, done: false, queue: 0, left: null };
+      const me = s = { rows: [], clicks: [], extras: [], dialog: null, timer: 0, openAt: 0, done: false, queue: 0, left: null, creditBox: null };
       const trs = SG.rows();
       const sample = trs.map(tr => SG.findButton(tr, '신청')).find(Boolean);
       const look = sample ? lookOf(sample) : REAL_LOOK;
@@ -237,6 +254,10 @@
           name,
           label: no ? `${name} (${no})` : name, // 결과 요약에서 같은 이름 과목(분반)을 구분
           hope, cap, // 마감 시각은 저장하지 않고 필요할 때 SG.engine으로 계산한다 (판정·요약과 값이 어긋나지 않게)
+          // 신청이 막히는지 볼 값 (엔진 blocked). 열이 없으면 그 검사는 건너뛴다
+          code: text(tr, '학수번호'),
+          credit: decimal(text(tr, '학점')) || 0,
+          times: parseTimes(text(tr, '수업시간')),
         };
         row.fake = fakeButton(look, () => apply(row));
         if (real) {
@@ -254,6 +275,16 @@
         me.rows.push(row);
       }
       if (!me.rows.length) throw new Error('희망수업에 신청할 과목이 없어요. 과목을 먼저 담아 주세요.');
+
+      // 학점 칸 (실제·목업 공통 id, docs/selectors.md). 이미 신청해서 [신청]이 없던 행도 연습에서는 신청 전으로 되돌리므로
+      // 지금 신청학점에서 그 학점을 뺀 값에서 시작한다. 최대학점을 못 읽으면 학점 검사는 하지 않는다
+      const max = decimal(document.getElementById('edMaxHakjeom')?.value ?? '');
+      me.creditBox = document.getElementById('edSincheongHakjeom');
+      me.creditWas = me.creditBox?.value;
+      const already = me.rows.filter(r => !r.host).reduce((sum, r) => sum + r.credit, 0);
+      me.credits = Math.max(0, (decimal(me.creditWas ?? '') || 0) - already);
+      me.start = { credits: me.credits, max: max > 0 ? max : Infinity };
+      if (me.creditBox) me.creditBox.value = String(me.credits);
       console.table(me.rows.map(r => {
         const close = closeSec(r.hope, r.cap);
         return { 과목: r.name, 희망: r.hope, 제한: r.cap, '마감(초)': close === Infinity ? '마감 안 됨' : +close.toFixed(1) };
@@ -279,6 +310,7 @@
         if (r.host) r.host.style.display = r.display;
         r.count?.replaceChildren(...r.countWas);
       });
+      if (s.creditBox) s.creditBox.value = s.creditWas;
       s.extras.forEach(e => e.remove());
       s.dialog?.remove();
       s = null;
