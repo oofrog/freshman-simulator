@@ -8,16 +8,15 @@ input, select, button { font: inherit; color: #4f535c; }
 .school-logo { width: 34px; height: 34px; }
 .school-name { width: 110px; color: #294e7b; font-size: 17px; font-weight: bold; }
 .right-area { gap: 14px; }
-/* 확장 켜기 버튼 (목업 전용, 브라우저 툴바의 확장 아이콘 대신): 확장 상태 바와 같은 위쪽 가운데.
-   모드 중에는 상태 바(z-index가 더 큼)가 덮는다. 처음에는 고리가 퍼지며 눈에 띄고, 한 번 누르면 멈춤 */
-#dev-guide { position: fixed; top: 19px; left: 50%; transform: translateX(-50%); z-index: 2147483645; display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px 0 8px; border: 0; border-radius: 8px; background: #2563eb; color: white; font: bold 13px/1 sans-serif; cursor: pointer; box-shadow: 0 1px 3px #0004; }
+/* 확장 켜기 버튼 (목업 전용, 브라우저 툴바의 확장 아이콘 대신): 툴바 아이콘처럼 오른쪽 위.
+   처음에는 고리가 퍼지며 눈에 띄고, 한 번 누르면 멈춤 */
+#dev-guide { position: fixed; top: 8px; right: 12px; z-index: 2147483645; display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px 0 8px; border: 0; border-radius: 8px; background: #2563eb; color: white; font: bold 13px/1 sans-serif; cursor: pointer; box-shadow: 0 1px 3px #0004; }
 #dev-guide:hover, #dev-guide:focus-visible { background: #1d4ed8; }
 #dev-guide svg { width: 18px; height: 18px; fill: white; }
 #dev-guide.is-new { animation: dev-guide-ring 1.6s ease-out infinite; }
 @keyframes dev-guide-ring { from { box-shadow: 0 0 0 0 #2563eb99; } to { box-shadow: 0 0 0 10px #2563eb00; } }
 @media (prefers-reduced-motion: reduce) { #dev-guide.is-new { animation: none; outline: 2px solid #f59e0b; outline-offset: 2px; } }
-/* 목업에서는 확장 패널이 확장 켜기 버튼 자리에 뜨고, 패널이 열려 있는 동안 버튼은 숨긴다 (실제 확장은 툴바 아이콘 쪽인 오른쪽 위) */
-body > .sg-panel { right: auto; left: 50%; transform: translateX(-50%); }
+/* 확장 패널은 확장 켜기 버튼 자리(오른쪽 위, core 기본 위치)에 뜨고, 패널이 열려 있는 동안 버튼은 숨긴다 */
 body:has(> .sg-panel:not([hidden])) #dev-guide { visibility: hidden; }
 #edQuickSuupNo { width: 86px; }
 #snb { display: flex; justify-content: space-between; align-items: center; gap: 12px; height: 41px; background: linear-gradient(#4c4f5b, #363945); overflow: auto hidden; scrollbar-width: none; white-space: nowrap; }
@@ -181,5 +180,9 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .course-dialog-close { width: 82px; height: 29px; border: 1px solid #ccc; border-radius: 2px; background: linear-gradient(white, #f3f3f3); cursor: pointer; }
 @media (max-width: 1350px) {
   .name-filter, .year-filter, .term-filter, .grade-filter, .special-filters { margin-left: 0; }
-  #logo-area { padding-right: 10px; }
+  #logo-area { padding-right: 116px; } /* 오른쪽 위 확장 켜기 버튼(목업 전용)이 학번·성명을 가리지 않게 버튼 폭만큼 비움 */
 }
+
+/* 페이지 링크 (실제 #pagingPanel과 같은 구조) */
+#pagingPanel { padding: 8px 0; text-align: center; }
+#pagingPanel .strong { font-weight: bold; color: #296BAE; }
