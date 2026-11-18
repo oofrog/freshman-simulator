@@ -290,6 +290,7 @@ window.SG = (() => {
     .sg-btn.off{background:#f3f4f6;color:#444}
     .sg-bubble{position:absolute;z-index:2147483646;max-width:300px;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;box-shadow:0 4px 12px #0004}
     .sg-bubble *{color:#fff}
+    .sg-bubble .sg-btn{color:#1e3a8a}
     .sg-bubble p,.sg-modal p{margin:4px 0;white-space:pre-line}
     .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
