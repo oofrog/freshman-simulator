@@ -102,6 +102,7 @@ function setup(initialScreen = '수강편람') {
     bubble: (target, options) => overlay('bubble', target, options),
     modal: options => overlay('modal', null, options),
     clear: () => { state.highlight = state.bubble = state.modal = null; },
+    bar: () => {},
     stop: () => { modes.tutorial.stop(); state.active = false; SG.clear(); },
     start: name => { SG.stop(); state.active = true; return modes[name].start(); },
   };

@@ -13,9 +13,6 @@ input, select, button { font: inherit; color: #4f535c; }
 #dev-guide { position: fixed; top: 8px; right: 12px; z-index: 2147483645; display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px 0 8px; border: 0; border-radius: 8px; background: #2563eb; color: white; font: bold 13px/1 sans-serif; cursor: pointer; box-shadow: 0 1px 3px #0004; }
 #dev-guide:hover, #dev-guide:focus-visible { background: #1d4ed8; }
 #dev-guide svg { width: 18px; height: 18px; fill: white; }
-#dev-guide.is-new { animation: dev-guide-ring 1.6s ease-out infinite; }
-@keyframes dev-guide-ring { from { box-shadow: 0 0 0 0 #2563eb99; } to { box-shadow: 0 0 0 10px #2563eb00; } }
-@media (prefers-reduced-motion: reduce) { #dev-guide.is-new { animation: none; outline: 2px solid #f59e0b; outline-offset: 2px; } }
 /* 확장 패널은 확장 켜기 버튼 자리(오른쪽 위, core 기본 위치)에 뜨고, 패널이 열려 있는 동안 버튼은 숨긴다 */
 body:has(> .sg-panel:not([hidden])) #dev-guide { visibility: hidden; }
 #edQuickSuupNo { width: 86px; }
@@ -26,21 +23,6 @@ body:has(> .sg-panel:not([hidden])) #dev-guide { visibility: hidden; }
 #snb li a[data-unavailable] { color: #9a9da6; cursor: not-allowed; }
 #snb li a[data-unavailable]:hover, #snb li a[data-unavailable]:focus-visible { background: transparent; }
 #menu-tip { position: fixed; z-index: 3; padding: 4px 8px; border-radius: 4px; background: #111827; color: white; white-space: nowrap; pointer-events: none; }
-#menu .over-btn { cursor: pointer; }
-#menu .over-btn[aria-expanded="true"] { background: linear-gradient(#f7f7f9, #ebebed); color: #00a9da; }
-#menu .sub_category {
-  position: fixed;
-  z-index: 2;
-  width: min(730px, 100%);
-  min-height: 147px;
-  padding: 20px 22px 15px;
-  border: 1px solid #494c56;
-  background: linear-gradient(#ededf0, #dadadc);
-  box-shadow: 1px 2px 7px #0002;
-}
-#menu .sub_category ul { display: block; width: fit-content; min-width: 160px; min-height: 110px; padding-right: 24px; border-right: 1px solid #cccdd0; }
-#menu .sub_category a { padding: 0; color: #4c4f5b; font-weight: normal; line-height: 22px; }
-#menu .sub_category a:hover, #menu .sub_category a:focus-visible { background: transparent; color: #007da5; text-decoration: underline; }
 .credits { display: flex; gap: 13px; padding-right: 6px; color: #c6c7ca; }
 .credits .text-type { margin-right: -9px; }
 .credits input { width: 43px; text-align: right; background: #eeeee8; }

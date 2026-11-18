@@ -38,7 +38,7 @@
   <div id="content-wrap"><div id="hyinContents"></div></div>
 </div>
 <!-- 브라우저 툴바의 확장 아이콘 대신 (오른쪽 위, 누르면 그 자리에 패널): extension/files.js의 파일을 차례로 불러오고 아이콘 클릭과 같이 동작 (data-sg라 차단 대상에서 빠짐) -->
-<button type="button" id="dev-guide" class="is-new" title="신입생 시뮬레이터 확장 (실제로는 브라우저 툴바의 확장 아이콘)" data-sg>
+<button type="button" id="dev-guide" title="신입생 시뮬레이터 확장 (실제로는 브라우저 툴바의 확장 아이콘)" data-sg>
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-2 .9-2 2v3.8h1.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7s2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
   확장 켜기
 </button>
@@ -179,8 +179,8 @@ const courseGroups = ['전체', '공통과목(교양)', '학과과목(전공)', 
 const searchBox = (page, q = query[page] || {}) => `<div class="search-box" data-page="${page}">
   <div class="search-row">
     <label class="first-filter">조직 <select id="cbJojikGbCd"><option>대학(학부/ERICA)</option></select></label>
-    <label class="year-filter">년도 <input type="number" id="cbYear" name="year" style="width:83px" value="${escapeAttr(q.year ?? 2026)}"${page === 'apply' ? ' disabled' : ''}></label>
-    <label class="term-filter">학기 <select id="cbTerm" name="term"${page === 'apply' ? ' disabled' : ''}>${opts(['1학기','여름학기','2학기','겨울학기'], q.term || '2학기')}</select></label>
+    <label class="year-filter">년도 <input type="number" id="cbYear" name="year" style="width:83px" value="${escapeAttr(q.year ?? 2027)}"${page === 'apply' ? ' disabled' : ''}></label>
+    <label class="term-filter">학기 <select id="cbTerm" name="term"${page === 'apply' ? ' disabled' : ''}>${opts(['1학기','여름학기','2학기','겨울학기'], q.term || '1학기')}</select></label>
     <label class="grade-filter">학년 <select id="cbGrade" name="grade">${opts(['전체','1','2','3','4','5','전학년'], q.grade)}</select></label>
     <span class="special-filters">특수강좌 ${['영어강의','E-러닝','SMART-F·B','PBL','산학협력영역'].map((label, i) => `<label><input type="checkbox" name="special" value="${i}"${q.special?.includes(String(i)) ? ' checked' : ''}> ${label}</label>`).join('')}</span>
     ${page === 'apply' ? `<div class="course-groups" role="group" aria-label="과목구분">${courseGroups.map((label, i) => {
@@ -241,25 +241,15 @@ const extraPages = [
   ['increase', '증원신청내역'], ['graduation', '졸업사정조회'], ['combined', '학석사공통신청'],
   ['volunteer', '사회봉사'], ['international', '국제여름/겨울학교'], ['keyword', '키워드검색'],
 ];
-const menuGroups = {
-  volunteer: ['사회봉사수강신청안내', '오리엔테이션일정', '사회봉사수강신청', '사회봉사수강신청(자율)', '수강신청내역확인'],
-  international: ['국제여름/겨울 신청안내', '국제여름/겨울 수강신청', '국제여름/겨울 신청내역'],
-};
 // 만들지 않은 화면: 메뉴는 눌리지 않고, 마우스를 올리거나 포커스하면 안내만 뜬다 (주소로 직접 들어오면 같은 문구)
 const UNAVAILABLE = '실제 수강신청 사이트에서만 볼 수 있어요.';
 const unsupported = () => `<p>${UNAVAILABLE}</p>`;
 const unavailable = new Set(['guide', ...extraPages.map(([key]) => key)]);
 for (const [key, title] of extraPages) PAGES.push([key, title, unsupported]);
-document.getElementById('menu').innerHTML = PAGES.map(([key, title]) => {
-  const group = menuGroups[key];
-  if (unavailable.has(key)) return `<li><a tabindex="0" aria-disabled="true" aria-describedby="menu-tip"${group ? '' : ` title="${title}"`} data-unavailable>${title}</a></li>`;
-  if (!group) return `<li><a href="#!${key}" title="${title}">${title}</a></li>`;
-  const links = group.map((label, i) => `<li><a href="#!${key}-${i}" title="${label}">${label}</a></li>`).join('');
-  return `<li><a class="over-btn" role="button" tabindex="0" aria-expanded="false" aria-controls="submenu-${key}">${title}</a><div id="submenu-${key}" class="sub_category" hidden><div class="list_scroll"><div class="list"><ul>${links}</ul></div></div></div></li>`;
-}).join('');
-for (const [key, labels] of Object.entries(menuGroups)) {
-  labels.forEach((label, i) => PAGES.push([`${key}-${i}`, label, unsupported]));
-}
+// 사회봉사·국제여름/겨울학교는 실제로는 하위 메뉴가 펼쳐지는 묶음이지만 MVP에서 빼서 다른 메뉴처럼 막아 둔다
+document.getElementById('menu').innerHTML = PAGES.map(([key, title]) => unavailable.has(key)
+  ? `<li><a tabindex="0" aria-disabled="true" aria-describedby="menu-tip" title="${title}" data-unavailable>${title}</a></li>`
+  : `<li><a href="#!${key}" title="${title}">${title}</a></li>`).join('');
 const menuTip = Object.assign(document.createElement('div'), { id: 'menu-tip', role: 'tooltip', hidden: true, textContent: UNAVAILABLE });
 document.body.append(menuTip);
 const menuTipFor = e => e.target.closest?.('#menu [data-unavailable]');
@@ -272,9 +262,9 @@ const showMenuTip = e => {
   menuTip.style.top = r.bottom + 4 + 'px';
 };
 const hideMenuTip = e => { if (menuTipFor(e)) menuTip.hidden = true; };
-const menuEl = document.getElementById('menu');
-['mouseover', 'focusin'].forEach(t => menuEl.addEventListener(t, showMenuTip));
-['mouseout', 'focusout'].forEach(t => menuEl.addEventListener(t, hideMenuTip));
+// window capture: 확장(자유 팁)이 페이지의 마우스 올림 이벤트를 막아도 안내가 뜨게. 확장보다 먼저 등록되므로 먼저 실행된다
+['mouseover', 'focusin'].forEach(t => addEventListener(t, showMenuTip, true));
+['mouseout', 'focusout'].forEach(t => addEventListener(t, hideMenuTip, true));
 document.getElementById('snb').addEventListener('scroll', () => { menuTip.hidden = true; });
 
 function render() {
@@ -284,48 +274,9 @@ function render() {
   document.getElementById('hyinContents').innerHTML = `<div class="header"><h3 class="txt_title">${title}</h3></div><div class="hyinTemplate">${view()}</div>`;
   edMinHakjeom.value = ME.min; edMaxHakjeom.value = ME.max; edSincheongHakjeom.value = sum();
 }
-let openMenu = null;
-function positionSubmenu() {
-  if (!openMenu) return;
-  const bounds = openMenu.getBoundingClientRect();
-  const panel = openMenu.nextElementSibling;
-  panel.style.left = Math.max(0, Math.min(bounds.left, document.documentElement.clientWidth - panel.offsetWidth)) + 'px';
-  panel.style.top = bounds.bottom + 'px';
-}
-
-function setOpenMenu(trigger) {
-  if (openMenu) {
-    openMenu.setAttribute('aria-expanded', 'false');
-    openMenu.nextElementSibling.hidden = true;
-  }
-  openMenu = trigger;
-  if (openMenu) {
-    openMenu.setAttribute('aria-expanded', 'true');
-    openMenu.nextElementSibling.hidden = false;
-    positionSubmenu();
-  }
-}
-
-document.getElementById('snb').addEventListener('scroll', positionSubmenu);
-addEventListener('scroll', positionSubmenu);
-addEventListener('resize', positionSubmenu);
 addEventListener('hashchange', () => {
-  setOpenMenu(null);
   pageNo = 1; // 화면을 옮기면 1페이지부터
   render();
-});
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && openMenu) {
-    const trigger = openMenu;
-    setOpenMenu(null);
-    trigger.focus();
-  }
-  const trigger = e.target.closest('#menu .over-btn');
-  if (trigger && (e.key === 'Enter' || e.key === ' ')) {
-    e.preventDefault();
-    trigger.click();
-  }
 });
 
 // ---------- 동작 ----------
@@ -361,7 +312,7 @@ function courseTimeTable(c) {
   const dayNames = '월화수목금토일';
   const slots = [...c.time.matchAll(/([월화수목금토일])\((\d{2}:\d{2}-\d{2}:\d{2})\)/g)];
   const rows = Array.from({ length: 16 }, (_, week) => slots.map(([,day,time]) => {
-    const date = new Date(Date.UTC(2026, 7, 31 + week * 7 + dayNames.indexOf(day)));
+    const date = new Date(Date.UTC(2027, 2, 1 + week * 7 + dayNames.indexOf(day))) // 2027-03-01(월)부터;
     return dialogCells([week + 1, c.lec ? '이론' : '실습', date.toISOString().slice(0, 10).replace(/-/g, '.'), day, time, c.prof]);
   }).join('')).join('');
   return dialogTable(['주(회)차','수업구분','날짜','요일','시간','교강사'], [10,12.5,21,9,26.5,21], rows || '<tr><td colspan="6">표시할 수업 시간이 없습니다.</td></tr>');
@@ -485,7 +436,7 @@ const ACT = {
     const gubun = box.dataset.page === 'apply' ? courseGroups[Number(f('strIlbanCommonGb'))] : f('gubun');
     query[box.dataset.page] = { gubun, type: f('type'), code: f('code'), name: f('name'), old: f('old'), year: f('year'), term: f('term'), grade: f('grade'), special, detail: !box.querySelector('.search-detail').hidden };
     found[box.dataset.page] = C.filter(c =>
-      f('year') === '2026' && f('term') === '2학기' &&
+      f('year') === '2027' && f('term') === '1학기' && // 27학번 신입생이 신청하는 학기만 결과가 있다
       (f('grade') === '전체' || String(c.year) === f('grade')) &&
       (!special.length || special.some(tag => c.special?.includes(tag))) &&
       (c.old || '').includes(f('old')) &&
@@ -511,14 +462,6 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
-  const menuTrigger = e.target.closest('#menu .over-btn');
-  if (menuTrigger) {
-    setOpenMenu(menuTrigger === openMenu ? null : menuTrigger);
-    return;
-  }
-  if (openMenu && (!openMenu.nextElementSibling.contains(e.target) || e.target.closest('a[href]'))) {
-    setOpenMenu(null);
-  }
   const detail = e.target.closest('[data-detail]');
   if (detail) {
     const panel = detail.closest('.search-box').querySelector('.search-detail');
@@ -567,19 +510,22 @@ async function devToggle() {
   }
   SG.toggle();
 }
-document.getElementById('dev-guide').addEventListener('click', e => { e.currentTarget.classList.remove('is-new'); devToggle(); });
+document.getElementById('dev-guide').addEventListener('click', devToggle);
 // ?sg → 열자마자 확장 켜기, ?sg=practice 처럼 모드 이름을 주면 그 모드까지 시작 (자동 새로고침과 같이 쓰기)
 const autoMode = new URLSearchParams(location.search).get('sg');
-if (autoMode !== null) devToggle().then(() => autoMode && SG.start(autoMode));
+const autoStart = () => devToggle().then(() => autoMode && SG.start(autoMode));
 
 render();
 
+// 첫 진입 안내: 처음 방문이면 띄우고, 닫으면(확인·Esc) 확장을 켜서 패널을 보여 준다 (?sg=모드이름이면 그 모드 시작).
+// 공지를 닫은 뒤에 켜야 공지를 닫는 Esc를 확장이 같이 받지 않는다. 다시 방문하면 공지 없이 ?sg일 때만 켠다
 const noticeDialog = document.getElementById('notice-dialog');
 const NOTICE_KEY = 'mock-notice-seen';
 let noticeSeen = false;
 try { noticeSeen = localStorage.getItem(NOTICE_KEY) === '1'; } catch {}
+noticeDialog.addEventListener('close', () => { try { localStorage.setItem(NOTICE_KEY, '1'); } catch {} autoStart(); });
 if (!noticeSeen) noticeDialog.showModal();
-noticeDialog.addEventListener('close', () => { try { localStorage.setItem(NOTICE_KEY, '1'); } catch {} });
+else if (autoMode !== null) autoStart();
 </script>
 </body>
 </html>
