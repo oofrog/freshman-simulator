@@ -34,7 +34,7 @@ test('기다릴수록 앞 인원은 줄고 진행률은 오르다가, 예상 시
     let last = queueAt(t);
     for (const f of [0.25, 0.5, 0.75]) {
       const q = queueAt(t, t + wait * f);
-      assert.ok(q.ahead <= last.ahead && q.progress >= last.progress && q.behind >= last.behind, `${msg} t=${t} f=${f}`);
+      assert.ok(q.ahead <= last.ahead && q.progress >= last.progress, `${msg} t=${t} f=${f}`);
       assert.ok(q.ahead > 0 && q.ahead <= ahead, `${msg} t=${t} f=${f}`);
       last = q;
     }

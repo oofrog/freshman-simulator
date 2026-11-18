@@ -131,11 +131,12 @@
 
   const waitText = sec => sec < 60 ? '1분 이내' : `${Math.ceil(sec / 60)}분`;
 
-  // 대기 화면. 표시 항목(앞·뒤 대기 인원, 예상 시간, 진행률, 닫기)은 넷퍼넬 코드 기준이고, 모양과 글자는 실제 템플릿을 못 봐서 임시다.
+  // 대기 화면. 표시 항목(앞 대기 인원, 예상 시간, 진행률, 닫기)은 넷퍼넬 코드 기준이고, 모양과 글자는 실제 템플릿을 못 봐서 임시다.
+  // 넷퍼넬 코드에는 뒤 대기 인원도 있지만, 실제 수강신청 화면에서 본 적이 없어 띄우지 않는다 (2026-11-18 팀원 기억)
   // 줄을 끝까지 기다려야 서버로 간다. [닫기]로 나오면 자리를 잃고, 다시 누르면 그 시각에 맨 뒤로 새로 선다
   const enterQueue = (row, t, left) => {
     const me = s, first = queueAt(t).ahead, stayed = left === null ? first : queueAt(left, t).ahead;
-    const time = h('b', ''), ahead = h('b', ''), behind = h('b', ''), bar = h('div', 'sg-wait-bar');
+    const time = h('b', ''), ahead = h('b', ''), bar = h('div', 'sg-wait-bar');
     const leave = () => {
       clearTimeout(me.queue);
       me.queue = 0;
@@ -143,13 +144,13 @@
       sysMessage(MSG.queueClosed);
     };
     // 안내 문구는 실제 화면에 없는, 연습용으로 넣은 것
-    const note = first > stayed ? [h('p', 'sg-wait-note', `[닫기]로 줄에서 나와 맨 뒤로 다시 섰어요. 그대로 기다렸다면 앞에 ${stayed}명이었는데 지금은 ${first}명입니다.`)] : [];
+    const note = first > stayed ? [h('p', 'sg-wait-note', `[닫기]로 줄에서 나와 맨 뒤로 다시 섰어요. 그대로 기다렸다면 대기자 ${stayed}명이었는데 지금은 ${first}명입니다.`)] : [];
     const box = SG.el('div', { className: 'sg-wait' },
       h('div', 'sg-wait-box',
         h('b', '', '접속 대기 중입니다'),
         h('p', '', '예상 대기 시간 ', time),
         h('div', 'sg-wait-track', bar),
-        h('p', '', '앞 ', ahead, '명 · 뒤 ', behind, '명'),
+        h('p', '', '대기자 ', ahead, '명'),
         ...note,
         h('div', 'sg-row', SG.el('button', { className: 'sg-btn', textContent: '닫기', onclick: leave }))));
     me.dialog?.remove();
@@ -163,7 +164,6 @@
       }
       time.textContent = waitText(q.wait);
       ahead.textContent = q.ahead;
-      behind.textContent = q.behind;
       bar.style.width = `${q.progress}%`;
       me.queue = setTimeout(tick, 100);
     };

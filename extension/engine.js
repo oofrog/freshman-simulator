@@ -102,14 +102,15 @@
   const arrived = t => t <= 0 ? 0 : QUEUE.crowd * doneBy(t);
 
   // 시작 후 t초에 줄을 선 사람이 now초에 보는 대기 화면 값.
-  // { ahead: 앞 대기 인원, behind: 뒤 대기 인원, wait: 남은 시간(초), progress: 진행률(0~100) }. 시작 전이나 줄이 없으면 wait는 0
+  // { ahead: 앞 대기 인원, wait: 남은 시간(초), progress: 진행률(0~100) }. 시작 전이나 줄이 없으면 wait는 0
+  // 넷퍼넬 코드에는 뒤 대기 인원도 있지만 실제 화면에서 본 적이 없어 계산하지 않는다
   // 줄은 먼저 선 순서대로 빠지므로 뒤에 선 사람은 앞사람보다 먼저 빠지지 않는다. 그래서 판정은 대기가 끝난 시각이 아니라 줄을 선 시각(judge의 t)으로 한다
   const queueAt = (t, now = t) => {
     const line = Math.max(0, arrived(t) - QUEUE.drain * Math.max(t, 0)); // 줄을 선 순간의 앞 인원 (소수)
     const start = Math.ceil(line);
-    if (!start) return { ahead: 0, behind: 0, wait: 0, progress: 100 };
+    if (!start) return { ahead: 0, wait: 0, progress: 100 };
     const ahead = Math.max(0, Math.ceil(line - QUEUE.drain * (now - t)));
-    return { ahead, behind: Math.round(arrived(now) - arrived(t)), wait: ahead / QUEUE.drain, progress: Math.floor(100 * (1 - ahead / start)) };
+    return { ahead, wait: ahead / QUEUE.drain, progress: Math.floor(100 * (1 - ahead / start)) };
   };
 
   const engine = { MODEL, QUEUE, closeSec, seatsLeft, judge, parseTimes, clash, blocked, replay, summarize, queueAt };
