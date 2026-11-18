@@ -43,6 +43,7 @@ window.SG = (() => {
     let hs;
     const columnOf = c => {
       if (!g?.contains(c)) return null;
+      if (c.colSpan > 1) return null; // 한 줄을 다 차지하는 칸(조회 결과 없음, 표 아래 바닥 줄)은 어느 열도 아님
       if (c.tagName === 'TH') return norm(c.textContent);
       return (hs ??= headers())[cells(c.parentElement).indexOf(c)] ?? null;
     };
