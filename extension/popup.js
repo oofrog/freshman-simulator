@@ -5,10 +5,10 @@ const list = document.getElementById('modes');
 const msg = document.getElementById('msg');
 
 (async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const target = { tabId: tab.id };
-  const run = async (func, args = []) => (await chrome.scripting.executeScript({ target, func, args }))[0].result;
   try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const target = { tabId: tab.id };
+    const run = async (func, args = []) => (await chrome.scripting.executeScript({ target, func, args }))[0].result;
     if (!await run(() => !!window.SG)) await chrome.scripting.executeScript({ target, files: SG_FILES });
     const { modes, mode } = await run(() => ({ modes: SG.modes, mode: SG.mode }));
     list.replaceChildren(...modes.map(({ name, label }) => {
