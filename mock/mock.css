@@ -5,30 +5,24 @@ input, select, button { font: inherit; color: #4f535c; }
 #logo-area { display: flex; align-items: end; justify-content: space-between; gap: 12px; height: 45px; padding: 0 9% 5px 10px; background: linear-gradient(#f3f5f6, #dfe1e4); box-shadow: inset 0 2px #c3d1d6; overflow: auto hidden; scrollbar-width: none; white-space: nowrap; }
 #logo-area h2 { margin: 0 12px 0 4px; padding: 3px 0 3px 8px; border-left: 1px solid #bac2cb; font-size: 16px; color: #55606d; }
 .left-area, .right-area, .quick-area { display: flex; align-items: center; gap: 6px; }
+.school-logo { width: 34px; height: 34px; }
 .school-name { width: 110px; color: #294e7b; font-size: 17px; font-weight: bold; }
-.mock-badge { padding: 2px 6px; border: 1px solid #9aacc3; border-radius: 3px; color: #294e7b; font-weight: bold; }
 .right-area { gap: 14px; }
-.right-area a { color: #9e2a20; font-size: 16px; font-weight: bold; text-decoration: none; }
+/* 확장 켜기 버튼 (목업 전용, 브라우저 툴바의 확장 아이콘 대신): 툴바 아이콘처럼 오른쪽 위.
+   처음에는 고리가 퍼지며 눈에 띄고, 한 번 누르면 멈춤 */
+#dev-guide { position: fixed; top: 8px; right: 12px; z-index: 2147483645; display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px 0 8px; border: 0; border-radius: 8px; background: #2563eb; color: white; font: bold 13px/1 sans-serif; cursor: pointer; box-shadow: 0 1px 3px #0004; }
+#dev-guide:hover, #dev-guide:focus-visible { background: #1d4ed8; }
+#dev-guide svg { width: 18px; height: 18px; fill: white; }
+/* 확장 패널은 확장 켜기 버튼 자리(오른쪽 위, core 기본 위치)에 뜨고, 패널이 열려 있는 동안 버튼은 숨긴다 */
+body:has(> .sg-panel:not([hidden])) #dev-guide { visibility: hidden; }
 #edQuickSuupNo { width: 86px; }
 #snb { display: flex; justify-content: space-between; align-items: center; gap: 12px; height: 41px; background: linear-gradient(#4c4f5b, #363945); overflow: auto hidden; scrollbar-width: none; white-space: nowrap; }
 #snb ul { display: flex; flex: none; list-style: none; margin: 0; padding: 0; }
 #snb li a { display: block; padding: 0 14px; line-height: 41px; color: white; font-weight: bold; text-decoration: none; }
 #snb li a:hover, #snb li a:focus-visible { background: #555967; }
-#menu .over-btn { cursor: pointer; }
-#menu .over-btn[aria-expanded="true"] { background: linear-gradient(#f7f7f9, #ebebed); color: #00a9da; }
-#menu .sub_category {
-  position: fixed;
-  z-index: 2;
-  width: min(730px, 100%);
-  min-height: 147px;
-  padding: 20px 22px 15px;
-  border: 1px solid #494c56;
-  background: linear-gradient(#ededf0, #dadadc);
-  box-shadow: 1px 2px 7px #0002;
-}
-#menu .sub_category ul { display: block; width: fit-content; min-width: 160px; min-height: 110px; padding-right: 24px; border-right: 1px solid #cccdd0; }
-#menu .sub_category a { padding: 0; color: #4c4f5b; font-weight: normal; line-height: 22px; }
-#menu .sub_category a:hover, #menu .sub_category a:focus-visible { background: transparent; color: #007da5; text-decoration: underline; }
+#snb li a[data-unavailable] { color: #9a9da6; cursor: not-allowed; }
+#snb li a[data-unavailable]:hover, #snb li a[data-unavailable]:focus-visible { background: transparent; }
+#menu-tip { position: fixed; z-index: 3; padding: 4px 8px; border-radius: 4px; background: #111827; color: white; white-space: nowrap; pointer-events: none; }
 .credits { display: flex; gap: 13px; padding-right: 6px; color: #c6c7ca; }
 .credits .text-type { margin-right: -9px; }
 .credits input { width: 43px; text-align: right; background: #eeeee8; }
@@ -104,7 +98,6 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .basic-section h4::before { content: "✓"; display: inline-grid; place-items: center; width: 12px; height: 12px; margin-right: 5px; border-radius: 2px; background: #426da6; color: white; font-size: 9px; }
 .basic-section + .basic-section { margin-top: 18px; }
 .basic-grid td:not(.empty) { min-height: 29px; }
-#dev-guide { position: fixed; right: 16px; bottom: 16px; }
 .grid a[data-act=limit], .grid .course-text-link, .course-link { color: inherit; text-decoration: none; }
 .grid tbody tr[data-no]:hover :is(a[href], button:enabled, input[type=button]:enabled) { text-decoration: underline; text-underline-offset: 2px; }
 .course-link { border: 0; background: none; padding: 0; cursor: pointer; line-height: 1.4; }
@@ -118,6 +111,12 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .course-dialog[data-kind=department] { min-height: min(584px, calc(100dvh - 24px)); }
 .course-dialog[data-kind=department] .course-dialog-footer { display: none; }
 .department-course-name { margin: 0 0 5px; }
+.course-dialog[data-kind=notice] { width: min(440px, calc(100vw - 24px)); }
+.course-dialog[data-kind=notice] .course-dialog-content { padding: 16px 20px 20px; font-size: 13px; }
+.course-dialog[data-kind=notice] ul { margin: 0; padding-left: 18px; }
+.course-dialog[data-kind=notice] .course-dialog-footer { gap: 8px; }
+.notice-real-link { display: inline-flex; align-items: center; height: 29px; padding: 0 12px; border: 1px solid #38639d; border-radius: 2px; color: #38639d; text-decoration: none; }
+.notice-real-link:hover, .notice-real-link:focus-visible { background: #eef3fa; }
 .course-dialog[data-kind=overview] { width: min(900px, calc(100vw - 24px)); min-height: min(684px, calc(100dvh - 24px)); }
 .course-dialog[data-kind=syllabus] { width: min(1040px, calc(100vw - 24px)); }
 .document-tools { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
@@ -163,7 +162,7 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
 .course-dialog-close { width: 82px; height: 29px; border: 1px solid #ccc; border-radius: 2px; background: linear-gradient(white, #f3f3f3); cursor: pointer; }
 @media (max-width: 1350px) {
   .name-filter, .year-filter, .term-filter, .grade-filter, .special-filters { margin-left: 0; }
-  #logo-area { padding-right: 10px; }
+  #logo-area { padding-right: 116px; } /* 오른쪽 위 확장 켜기 버튼(목업 전용)이 학번·성명을 가리지 않게 버튼 폭만큼 비움 */
 }
 
 /* 페이지 링크 (실제 #pagingPanel과 같은 구조) */
