@@ -375,7 +375,8 @@ window.SG = (() => {
       ui.panel.remove(); ui.bar.remove(); ui.style.remove(); ui = null;
     }
   }
-  // 아이콘 클릭 (background.js, 목업의 확장 아이콘): 꺼져 있으면 켜고 패널을 연다. 켜져 있으면 패널 열기↔닫기
+  // 목업의 확장 켜기 버튼: 꺼져 있으면 켜고 패널을 연다. 켜져 있으면 패널 열기↔닫기
+  // (크롬 확장은 페이지 위 패널 대신 브라우저 팝업을 쓴다: popup.js가 SG.modes를 읽고 SG.start·SG.stop을 부른다)
   function toggle() {
     if (!ui) return on();
     panelOpen() ? closePanel() : showPanel();
@@ -383,6 +384,7 @@ window.SG = (() => {
 
   return {
     register, start, stop, toggle, bar, get mode() { return current; },
+    get modes() { return Object.entries(modes).map(([name, m]) => ({ name, label: m.label })); },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
     matchTip, tryable, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, clear, el,
   };

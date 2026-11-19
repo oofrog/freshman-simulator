@@ -15,6 +15,9 @@ input, select, button { font: inherit; color: #4f535c; }
 #dev-guide svg { width: 18px; height: 18px; fill: white; }
 /* 확장 패널은 확장 켜기 버튼 자리(오른쪽 위, core 기본 위치)에 뜨고, 패널이 열려 있는 동안 버튼은 숨긴다 */
 body:has(> .sg-panel:not([hidden])) #dev-guide { visibility: hidden; }
+/* 패널 제목은 크롬 확장 팝업(extension/popup.html)과 같게: 앞에 확장 아이콘, 글자 16px */
+.sg-panel > b { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: 16px; }
+.sg-panel > b::before { content: ""; flex: none; width: 24px; height: 24px; background: url(../extension/icons/icon48.png) center / contain no-repeat; }
 #edQuickSuupNo { width: 86px; }
 #snb { display: flex; justify-content: space-between; align-items: center; gap: 12px; height: 41px; background: linear-gradient(#4c4f5b, #363945); overflow: auto hidden; scrollbar-width: none; white-space: nowrap; }
 #snb ul { display: flex; flex: none; list-style: none; margin: 0; padding: 0; }

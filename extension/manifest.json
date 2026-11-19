@@ -4,6 +4,10 @@
   "version": "0.2",
   "description": "수강신청 화면 위에서 튜토리얼·실전 재현·팁으로 연습합니다. 실제 신청은 되지 않습니다.",
   "permissions": ["activeTab", "scripting"],
-  "background": { "service_worker": "background.js" },
-  "action": { "default_title": "신입생 시뮬레이터" }
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": {
+    "default_title": "신입생 시뮬레이터",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  }
 }
