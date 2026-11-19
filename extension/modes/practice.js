@@ -255,6 +255,7 @@
       document.head.append(style);
       me.extras.push(style);
 
+      SG.bar(false); // 시작 안내 중에는 상태 바를 숨기고, 카운트다운부터 띄운다
       await SG.modal({
         title: '실전 재현',
         text: `희망수업의 [신청] 버튼으로 실제처럼 연습합니다.\n[시작]을 누르면 ${COUNTDOWN}초 뒤에 신청이 열려요.\n실제처럼 남은 자리는 보이지 않고, 마감 여부는 [신청]을 눌러야 알 수 있어요.`,

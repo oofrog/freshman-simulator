@@ -312,7 +312,7 @@ function courseTimeTable(c) {
   const dayNames = '월화수목금토일';
   const slots = [...c.time.matchAll(/([월화수목금토일])\((\d{2}:\d{2}-\d{2}:\d{2})\)/g)];
   const rows = Array.from({ length: 16 }, (_, week) => slots.map(([,day,time]) => {
-    const date = new Date(Date.UTC(2027, 2, 1 + week * 7 + dayNames.indexOf(day))) // 2027-03-01(월)부터;
+    const date = new Date(Date.UTC(2027, 2, 1 + week * 7 + dayNames.indexOf(day))); // 2027-03-01(월)부터
     return dialogCells([week + 1, c.lec ? '이론' : '실습', date.toISOString().slice(0, 10).replace(/-/g, '.'), day, time, c.prof]);
   }).join('')).join('');
   return dialogTable(['주(회)차','수업구분','날짜','요일','시간','교강사'], [10,12.5,21,9,26.5,21], rows || '<tr><td colspan="6">표시할 수업 시간이 없습니다.</td></tr>');
