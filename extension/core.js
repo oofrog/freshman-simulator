@@ -163,15 +163,33 @@ window.SG = (() => {
     bubbleAt = { el: target, keep: btns.length > 0 };
     placeBubble();
   });
-  // 모달: 화면 가운데. 누른 버튼 글자로 resolve
+  // 확장 모달 공통: <dialog>를 showModal()로 띄운다. 바깥(페이지·가짜 [신청]·상태 바)은 브라우저가 Tab·클릭 모두 막고(inert),
+  // dialog는 z-index와 상관없이 맨 위에 그려진다. 닫을 때는 remove()
+  // esc: Esc를 눌렀을 때 할 일 (없으면 Esc로 닫히지 않음). 브라우저 자체 Esc 닫기는 막고 guard가 맨 위 모달의 esc만 부른다.
+  // 포커스는 dialog 자체에 둔다 (첫 버튼에 두면 [닫기] 같은 버튼이 Enter 한 번에 눌림). 버튼에 둘 곳은 띄운 쪽에서 focus()
+  let dialogs = []; // 띄운 순서대로 { box, esc }
+  const dialog = (props, kids, esc = null) => {
+    const box = el('dialog', props, ...kids);
+    box.addEventListener('cancel', e => e.preventDefault());
+    document.body.append(box);
+    box.tabIndex = -1;
+    box.showModal();
+    box.focus();
+    dialogs.push({ box, esc });
+    return box;
+  };
+  const topDialog = () => (dialogs = dialogs.filter(d => d.box.isConnected && d.box.open)).at(-1);
+  // 모달: 화면 가운데. 누른 버튼 글자로 resolve. 버튼이 하나뿐이면 Esc는 그 버튼을 누른 것과 같다 (예: 시작 실패 안내 → 확장도 꺼짐).
+  // 고를 버튼이 여럿이면 모드가 답을 기다리므로 Esc로 닫지 않는다
   const modal = ({ title = '', text = '', buttons: btns = ['확인'] }) => new Promise(done => {
     modalEl?.remove();
-    const back = el('div', { className: 'sg-back' },
+    const keys = btns.map(b => el('button', { className: 'sg-btn', textContent: b, onclick: () => { back.remove(); done(b); } }));
+    const back = dialog({ className: 'sg-back' }, [
       el('div', { className: 'sg-modal' },
         ...(title ? [el('b', { textContent: title })] : []),
         el('p', { textContent: text }),
-        el('div', { className: 'sg-row' }, ...btns.map(b => el('button', { className: 'sg-btn', textContent: b, onclick: () => { back.remove(); done(b); } })))));
-    document.body.append(back);
+        el('div', { className: 'sg-row' }, ...keys))], keys.length === 1 ? () => keys[0].click() : null);
+    keys[0]?.focus(); // Enter로 첫 버튼([확인]·[시작] 등)
     modalEl = back;
   });
   // 마우스를 올린 요소에 얇은 테두리 + 오른쪽 위 "?" 배지 (자유 팁: 팁이 있는 요소만). null이면 지움.
@@ -186,12 +204,6 @@ window.SG = (() => {
   };
   // 강조·말풍선·모달을 닫는다. 호버 테두리는 마우스를 따라가므로 그대로 둔다 (모드 종료 때 stop()이 지움)
   const clear = () => { unhighlight(); bubbleEl?.remove(); modalEl?.remove(); };
-  // Esc 기본 처리: 버튼이 하나뿐인 모달은 그 버튼을 누른 것과 같게 닫는다 (예: 시작 실패 안내 → 확장도 꺼짐).
-  // 고를 버튼이 여럿인 모달과 말풍선은 모드가 답을 기다리거나 설명 중일 수 있어 건드리지 않는다 (말풍선을 닫을 모드는 escape()에서)
-  const dismiss = () => {
-    const btns = modalEl?.isConnected ? modalEl.querySelectorAll('.sg-row button') : [];
-    if (btns.length === 1) btns[0].click();
-  };
 
   // 페이지 자체 호버 끄기 (자유 팁): 학교 CSS의 :hover 규칙과 마우스 올림 이벤트를 막고, 커서를 기본 화살표로 통일한다.
   // :hover 규칙은 절대 맞지 않는 :not(*)로 바꿔 두었다가 끌 때 원래대로 되돌린다.
@@ -242,8 +254,12 @@ window.SG = (() => {
   const guard = e => {
     const m = modes[current];
     // Esc: 맨 위에 떠 있는 것 하나만 닫는다. 모드는 끄지 않는다 (끄기는 [끝내기] 등 버튼으로만). 포커스가 확장 요소 안이어도 같다
-    // 패널이 열려 있으면 패널, 아니면 모드가 escape()를 정의했을 때 그것만(예: 실전 재현은 메시지만 닫음), 없으면 dismiss()
-    if (e.type === 'keydown' && e.key === 'Escape') return panelOpen() ? closePanel() : m?.escape ? m.escape() : dismiss();
+    // 패널이 열려 있으면 패널, 아니면 맨 위 모달의 esc(없으면 아무것도 안 함), 모달이 없으면 모드의 escape() (자유 팁의 말풍선 등)
+    if (e.type === 'keydown' && e.key === 'Escape') {
+      const d = topDialog();
+      if (d) e.preventDefault(); // 브라우저가 dialog를 직접 닫으면 기다리던 Promise가 끝나지 않으므로 막는다
+      return panelOpen() ? closePanel() : d ? d.esc?.() : m?.escape?.();
+    }
     if (bypass) return;
     // 패널이 열려 있을 때 패널 밖을 누르면 그 누름은 막고 패널만 닫는다 (팝업처럼 닫히면서 실제 버튼이 눌리지 않게).
     // 확장 요소(가짜 [신청], 말풍선, 상태 바 등)도 페이지와 똑같이 막는다
@@ -263,7 +279,7 @@ window.SG = (() => {
   };
 
   // ---------- 모드 · 패널 ----------
-  // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()? })
+  // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()? }). escape()는 모달이 없을 때 Esc
   // 패널은 확장 팝업처럼 동작: 아이콘으로 열고, 바깥을 누르거나 모드를 시작하면 닫힌다. 모드 없이 닫히면 확장도 꺼진다.
   // 모드 중에는 위쪽 가운데 상태 바가 뜬다. 기본은 '모드 이름 중' + [끝내기]이고, 모드가 SG.bar()로 내용을 바꾸거나 숨길 수 있다
   const register = (name, mode) => { modes[name] = mode; ui && renderPanel(); };
@@ -335,13 +351,17 @@ window.SG = (() => {
     .sg-bar span{color:#fff;font-size:15px;font-weight:bold}
     .sg-bar .sg-btn{background:#fff;color:#111827;font-weight:bold}
     .sg-btn{all:unset;cursor:pointer;padding:5px 10px;border-radius:6px;background:#eef2ff;color:#1e3a8a;text-align:center;font:13px/1.5 sans-serif}
+    .sg-btn:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
     .sg-btn.on{background:#2563eb;color:#fff}
     .sg-btn.off{background:#f3f4f6;color:#444}
     .sg-bubble{position:absolute;z-index:2147483646;max-width:300px;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;box-shadow:0 4px 12px #0004}
     .sg-bubble *{color:#fff}
     .sg-bubble .sg-btn{color:#1e3a8a}
     .sg-bubble p,.sg-modal p{margin:4px 0;white-space:pre-line}
-    .sg-back{position:fixed;inset:0;z-index:2147483647;background:#0006;display:flex;align-items:center;justify-content:center}
+    :where(dialog[data-sg]){position:fixed;inset:0;width:auto;height:auto;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:inherit;overflow:visible}
+    :where(dialog[data-sg])::backdrop{background:transparent}
+    :where(dialog[data-sg]):focus{outline:none}
+    .sg-back[open]{background:#0006;display:flex;align-items:center;justify-content:center}
     .sg-modal{background:#fff;border-radius:10px;padding:18px 20px;min-width:260px;max-width:400px;box-shadow:0 8px 24px #0005}
     .sg-row{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
     .sg-hover,.sg-lit{outline:1.5px solid #f59e0b !important;outline-offset:-1.5px !important}
@@ -386,6 +406,6 @@ window.SG = (() => {
     register, start, stop, toggle, bar, get mode() { return current; },
     get modes() { return Object.entries(modes).map(([name, m]) => ({ name, label: m.label })); },
     screen, grid, headers, rows, cell, cells, buttons, findButton, label, norm, goMenu, waitFor,
-    matchTip, tryable, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, clear, el,
+    matchTip, tryable, tipEl, highlight, unhighlight, hover, quiet, bubble, modal, dialog, clear, el,
   };
 })();
