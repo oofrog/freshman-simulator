@@ -281,7 +281,7 @@ window.SG = (() => {
   // ---------- 모드 · 패널 ----------
   // 모드 등록: SG.register('tip', { label, start(), stop(), allow(el)?, blocked(el)?, escape()? }). escape()는 모달이 없을 때 Esc
   // 패널은 확장 팝업처럼 동작: 아이콘으로 열고, 바깥을 누르거나 모드를 시작하면 닫힌다. 모드 없이 닫히면 확장도 꺼진다.
-  // 모드 중에는 위쪽 가운데 상태 바가 뜬다. 기본은 '모드 이름 중' + [끝내기]이고, 모드가 SG.bar()로 내용을 바꾸거나 숨길 수 있다
+  // 모드 중에는 오른쪽 위 상태 창이 뜬다. 기본은 '모드 이름 중' + [끝내기]이고, 모드가 SG.bar()로 내용을 바꾸거나 숨길 수 있다
   const register = (name, mode) => { modes[name] = mode; ui && renderPanel(); };
   let runs = 0; // 시작할 때마다 1씩 늘린다. 늦게 실패한 이전 시작이 지금 켠 모드를 끄지 않게 한다
   const start = async name => {
@@ -337,19 +337,49 @@ window.SG = (() => {
     if (ui.bar.hidden) return;
     const { text, buttons = [] } = barSpec || { text: `${m.label} 중`, buttons: [['끝내기', () => stop()]] };
     ui.bar.replaceChildren(
-      el('span', { textContent: text }),
-      ...buttons.map(([label, onclick]) => el('button', { className: 'sg-btn', textContent: label, onclick })));
+      el('span', { className: 'sg-win-title', textContent: text }),
+      ...buttons.map(([label, onclick]) => el('button', { className: 'sg-btn off', textContent: label, onclick })));
   };
-  // 모드가 상태 바를 바꿀 때: SG.bar({ text: '수강신청 시작까지 3초' }), SG.bar({ text, buttons: [['연습 끝내기', fn]] }),
+  // 상태 창(.sg-win): 모드 중 오른쪽 위 창. 상태 바·튜토리얼 진행 패널·실전 재현 시계 창이 같이 쓴다 (#40).
+  //   모드 패널이 있던 자리에 내려앉듯 나타나고, 잡고 끌어 옮길 수 있다 (dragWin). 첫 줄(.sg-win-head)은 제목(.sg-win-title) + [끝내기류] 버튼(sg-btn off)
+  // 모드가 상태 바를 바꿀 때: SG.bar({ text: '수강신청 시작까지 3초' }), SG.bar({ text, buttons: [['그만하기', fn]] }),
   // SG.bar(false)(숨김, 자기 패널을 그리는 튜토리얼), SG.bar()(기본으로)
   const bar = spec => { barSpec = spec; renderBar(); };
+  // 상태 창 옮기기: 창을 잡고 끌면 옮겨진다 (화면을 가릴 때). 버튼을 누를 때는 옮기지 않는다.
+  // 옮긴 자리는 모든 상태 창이 같이 쓰고, 확장을 껐다 켜도 페이지를 새로 열기 전까지 남는다.
+  // 창마다 높이가 달라서(상태 바 < 튜토리얼 패널), 화면 아래쪽 절반에 놓으면 아래 거리로 기억해 더 높은 창은 위로 자라게 한다 (아래가 잘리지 않게).
+  // 브라우저 창 크기가 바뀌어도 화면 안에 남게 CSS clamp로 묶는다 (가장 높은 창 ≈ 130px)
+  let winAt = null; // { right, top } 또는 { right, bottom } (px). null이면 CSS 기본 자리(오른쪽 위 12px)
+  const placeWins = () => {
+    if (!ui) return;
+    const y = winAt && ('top' in winAt ? `top:clamp(0px,${winAt.top}px,calc(100vh - 140px))` : `top:auto;bottom:clamp(0px,${winAt.bottom}px,calc(100vh - 140px))`);
+    ui.at.textContent = winAt ? `.sg-win[data-sg]{right:clamp(0px,${winAt.right}px,calc(100vw - 120px));${y}}` : '';
+  };
+  const dragWin = e => {
+    const box = e.target.closest?.('.sg-win');
+    if (!box || e.button !== 0 || e.target.closest('button, input, select, textarea, a')) return;
+    e.preventDefault(); // 글자 선택 대신 옮기기
+    const r = box.getBoundingClientRect(), dx = e.clientX - r.right, dy = e.clientY - r.top;
+    const move = m => {
+      const right = Math.round(Math.max(0, Math.min(viewW() - r.width, viewW() - m.clientX + dx)));
+      const top = Math.round(Math.max(0, Math.min(viewH() - r.height, m.clientY - dy)));
+      winAt = top + r.height / 2 > viewH() / 2 ? { right, bottom: viewH() - top - r.height } : { right, top };
+      placeWins();
+    };
+    const end = () => ['pointermove', 'pointerup', 'pointercancel'].forEach((t, i) => box.removeEventListener(t, i ? end : move));
+    box.setPointerCapture(e.pointerId);
+    ['pointermove', 'pointerup', 'pointercancel'].forEach((t, i) => box.addEventListener(t, i ? end : move));
+  };
   const CSS = `
     [data-sg]{font:13px/1.5 sans-serif;color:#111;box-sizing:border-box}
     .sg-panel{position:fixed;top:12px;right:12px;z-index:2147483647;background:#fff;border:2px solid #2563eb;border-radius:10px;padding:10px;width:200px;box-shadow:0 4px 16px #0003;display:flex;flex-direction:column;gap:6px}
-    .sg-panel[hidden],.sg-bar[hidden]{display:none}
-    .sg-bar{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:12px;white-space:nowrap;background:#111827;border-radius:8px;padding:8px 18px;box-shadow:0 4px 12px #0004}
-    .sg-bar span{color:#fff;font-size:15px;font-weight:bold}
-    .sg-bar .sg-btn{background:#fff;color:#111827;font-weight:bold}
+    .sg-panel[hidden],.sg-win[hidden]{display:none}
+    .sg-win[data-sg]{position:fixed;top:12px;right:12px;z-index:2147483646;width:min(260px,calc(100vw - 24px));padding:12px;background:#fff;border:2px solid #2563eb;border-radius:10px;box-shadow:0 4px 16px #0003;transform-origin:top right;animation:sg-win-in .28s cubic-bezier(.2,.8,.2,1) .12s both}
+    @keyframes sg-win-in{from{opacity:0;transform:translateY(-8px) scale(.98)}}
+    @media (prefers-reduced-motion:reduce){.sg-win[data-sg]{animation:none}}
+    .sg-win[data-sg]{cursor:move;user-select:none;touch-action:none}
+    .sg-win-head{display:flex;align-items:center;gap:12px}
+    .sg-win-title{margin-right:auto;font-weight:bold;color:#1e3a8a}
     .sg-btn{all:unset;cursor:pointer;padding:5px 10px;border-radius:6px;background:#eef2ff;color:#1e3a8a;text-align:center;font:13px/1.5 sans-serif}
     .sg-btn:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
     .sg-btn.on{background:#2563eb;color:#fff}
@@ -376,10 +406,12 @@ window.SG = (() => {
   //   자유 팁(sg-quiet)에서만 적용한다. 실전 재현 등은 실제 화면과 같아야 해서
 
   function on() {
-    ui = { style: el('style', { textContent: CSS }), panel: el('div', { className: 'sg-panel' }), bar: el('div', { className: 'sg-bar', hidden: true }) };
-    document.head.append(ui.style);
+    ui = { style: el('style', { textContent: CSS }), at: el('style'), panel: el('div', { className: 'sg-panel' }), bar: el('div', { className: 'sg-win sg-win-head sg-bar', hidden: true }) };
+    document.head.append(ui.style, ui.at);
     document.body.append(ui.panel, ui.bar);
+    placeWins();
     EVENTS.forEach(t => addEventListener(t, guard, true));
+    addEventListener('pointerdown', dragWin, true); // guard 뒤에 둔다: 패널이 열려 있으면 guard가 먼저 막는다
     ['scroll', 'resize'].forEach(t => addEventListener(t, place, true));
     renderPanel();
   }
@@ -392,7 +424,8 @@ window.SG = (() => {
       clear();
       EVENTS.forEach(t => removeEventListener(t, guard, true));
       ['scroll', 'resize'].forEach(t => removeEventListener(t, place, true));
-      ui.panel.remove(); ui.bar.remove(); ui.style.remove(); ui = null;
+      removeEventListener('pointerdown', dragWin, true);
+      ui.panel.remove(); ui.bar.remove(); ui.style.remove(); ui.at.remove(); ui = null;
     }
   }
   // 목업의 확장 켜기 버튼: 꺼져 있으면 켜고 패널을 연다. 켜져 있으면 패널 열기↔닫기

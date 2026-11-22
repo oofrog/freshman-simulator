@@ -43,12 +43,7 @@
   const DIM = '';
 
   const CSS = `
-    /* 진행 패널은 모드 패널이 있던 오른쪽 위에 내려앉듯 나타난다 (모드 패널은 core가 시작할 때 숨긴다) */
-    .sg-step[data-sg]{position:fixed;top:12px;right:12px;z-index:2147483646;width:min(260px,calc(100vw - 24px));padding:12px;background:#fff;border:2px solid #2563eb;border-radius:10px;box-shadow:0 4px 16px #0003;transform-origin:top right;animation:sg-step-in .28s cubic-bezier(.2,.8,.2,1) .12s both}
-    @keyframes sg-step-in{from{opacity:0;transform:translateY(-8px) scale(.98)}}
-    @media (prefers-reduced-motion:reduce){.sg-step[data-sg]{animation:none}}
-    .sg-step-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .sg-step-count{font-weight:bold;color:#1e3a8a}
+    /* 진행 패널의 자리·모양·나타나는 움직임은 core 상태 창(.sg-win)과 같다 */
     .sg-step progress{display:block;width:100%;height:6px;margin:10px 0;accent-color:#2563eb}
     .sg-step-hint{margin:10px 0 0;line-height:1.5}
     .sg-step button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
@@ -217,14 +212,14 @@
       // 중단되면 waitFor의 타이머도 다음 확인 때 정리된다.
       const until = (test, ms) => wait(SG.waitFor(() => !alive() || test(), ms).then(() => true, () => false));
       const style = SG.el('style', { textContent: CSS });
-      const count = SG.el('span', { className: 'sg-step-count' });
+      const count = SG.el('span', { className: 'sg-win-title sg-step-count' });
       const progress = SG.el('progress', { max: STEPS.length, value: 0 });
       progress.setAttribute('aria-label', '튜토리얼 진행');
       const hint = SG.el('p', { className: 'sg-step-hint' });
       hint.setAttribute('role', 'status');
       const screens = screensOf(STEPS);
-      const panel = SG.el('section', { className: 'sg-step' },
-        SG.el('div', { className: 'sg-step-head' }, count,
+      const panel = SG.el('section', { className: 'sg-win sg-step' },
+        SG.el('div', { className: 'sg-win-head' }, count,
           SG.el('button', { className: 'sg-btn off', textContent: '그만하기', onclick: () => SG.stop() })),
         progress, hint);
       panel.setAttribute('aria-label', '튜토리얼 진행 안내');

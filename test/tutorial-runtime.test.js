@@ -175,7 +175,7 @@ test('모든 시작 화면에서 수강편람으로 이동하고 팁 원문 그�
         const progress = ui.find(node => node.tagName === 'PROGRESS');
         assert.equal(progress.value, index + 1);
         assert.equal(progress.max, h.mode.steps.length);
-        assert.equal(ui.find(node => node.className === 'sg-step-count').textContent, `튜토리얼 ${index + 1} / ${h.mode.steps.length}`);
+        assert.equal(ui.find(node => node.classList?.contains('sg-step-count')).textContent, `튜토리얼 ${index + 1} / ${h.mode.steps.length}`);
         await h.advance();
       }
       assert.ok(h.state.modal, '마지막 단계 뒤 완료 안내');
