@@ -46,7 +46,7 @@ class Element {
       const rule = part.trim();
       if (rule === '.search-box') return this.classList.contains('search-box');
       if (rule === 'input:not([type])') return this.tagName === 'INPUT' && this.type === undefined;
-      const match = rule.match(/^(input|select|option|textarea|button|label)(?:\[type=["']?([^\]"']+)["']?\])?$/);
+      const match = rule.match(/^(input|select|option|textarea|button|label|td|th)(?:\[type=["']?([^\]"']+)["']?\])?$/);
       return !!match && this.tagName === match[1].toUpperCase() && (!match[2] || this.type === match[2]);
     });
   }
@@ -91,6 +91,7 @@ function setup(initialScreen = '수강편람') {
       if (!nodes.has(tip.id)) {
         const tag = tip.find.menu ? 'a' : tip.find.button ? 'button' : tip.find.column ? 'th' : 'div';
         const node = new Element(tag, { tip });
+        if (tip.id === 'basic.hopeAdd') node.append(new Element('input', { type: 'button' }));
         // [조회]는 실제 화면처럼 검색 영역(.search-box) 안에 둔다 (튜토리얼은 그 영역의 조건 칸도 허용)
         if (tip.find.button === '조회') new Element('div', { className: 'search-box' }, node);
         nodes.set(tip.id, node);
@@ -98,6 +99,9 @@ function setup(initialScreen = '수강편람') {
       return nodes.get(tip.id);
     },
     highlight: target => { state.highlight = target; },
+    rows: () => [{}],
+    cell: (_row, column) => column === '희망신청' ? SG.tipEl(modes.tutorial.tipOf('basic.hopeAdd')) : null,
+    buttons: cell => cell.children.filter(node => node.tagName === 'INPUT'),
     unhighlight: () => { state.highlight = null; },
     bubble: (target, options) => overlay('bubble', target, options),
     modal: options => overlay('modal', null, options),
@@ -186,6 +190,76 @@ test('모든 시작 화면에서 수강편람으로 이동하고 팁 원문 그�
   }
 });
 
+test('조회와 초기화가 같은 칸에 있어도 조회 버튼만 강조하고 허용한다', async () => {
+  const h = setup();
+  const search = h.SG.tipEl(h.mode.tipOf('pyunram.search'));
+  const reset = new Element('input', { type: 'button', value: '초기화' });
+  search.parentElement.append(new Element('td', {}, reset, search));
+  await h.start();
+  assert.equal(h.state.bubble.target, search);
+  assert.equal(h.mode.allow(reset, { type: 'click' }), false);
+  assert.equal(h.mode.allow(search, { type: 'click' }), true);
+  await h.flush();
+  assert.equal(h.state.bubble.options.title, h.mode.tipOf('common.col.no').title);
+  h.SG.stop();
+});
+
+test('버튼을 포함한 셀 전체를 안내하지만 신청 버튼 실행은 막는다', async () => {
+  const h = setup();
+  const button = new Element('input', { type: 'button' });
+  const applied = new Element('td'); // 이미 신청해 [신청]이 없는 행
+  const cell = new Element('td', {}, button);
+  const rows = [new Element('tr', {}, applied), new Element('tr', {}, cell)];
+  const cellOf = h.SG.cell;
+  h.SG.rows = () => rows;
+  h.SG.cell = (tr, column) => column === '수강신청' ? tr.children[0] : cellOf(tr, column);
+  await h.start();
+  const index = h.mode.steps.findIndex(([id]) => id === 'basic.apply');
+  for (let i = 0; i < index; i++) await h.advance();
+  assert.equal(h.state.bubble.options.title, h.mode.tipOf('basic.apply').title);
+  assert.equal(h.state.bubble.target, cell);
+  assert.equal(h.mode.allow(button, { type: 'click' }), false);
+  assert.equal(h.mode.allow(cell, { type: 'click' }), false);
+  h.SG.stop();
+});
+
+// 열 설명 단계(수업번호)에서 말풍선이 붙는 곳 (#34)
+const columnTarget = async rows => {
+  const h = setup();
+  h.SG.rows = () => rows.map(td => new Element('tr', {}, td));
+  h.SG.cell = tr => tr.children[0];
+  await h.start();
+  await h.advance();
+  assert.equal(h.state.bubble.options.title, h.mode.tipOf('common.col.no').title);
+  const target = h.state.bubble.target;
+  h.SG.stop();
+  return { h, target };
+};
+
+test('열 설명은 열 제목 대신 첫 행의 칸을 가리킨다', async () => {
+  const first = new Element('td', { textContent: '10001', innerText: '10001' });
+  const { target } = await columnTarget([first, new Element('td', { textContent: '10002', innerText: '10002' })]);
+  assert.equal(target, first);
+});
+
+test('열 설명은 첫 행 칸이 비어 있으면 내용이 있는 다음 행의 칸을 가리킨다', async () => {
+  const filled = new Element('td', { textContent: 'Y', innerText: 'Y' });
+  const { target } = await columnTarget([
+    new Element('td', { textContent: ' ', innerText: ' ' }),
+    new Element('td', { textContent: '숨김', innerText: '' }), // 숨긴 글자만 있는 칸
+    filled,
+  ]);
+  assert.equal(target, filled);
+});
+
+test('열 설명은 행이 없거나 모든 칸이 비어 있으면 열 제목을 가리킨다', async () => {
+  for (const rows of [[], [new Element('td', { textContent: '', innerText: '' })]]) {
+    const { h, target } = await columnTarget(rows);
+    assert.equal(target, h.SG.tipEl(h.mode.tipOf('common.col.no')));
+    assert.equal(target.tagName, 'TH');
+  }
+});
+
 test('이전은 앞 화면으로 돌아가며 다시 진행하면 같은 메뉴를 한 번만 누른다', async () => {
   const h = setup();
   await h.start();
@@ -196,7 +270,9 @@ test('이전은 앞 화면으로 돌아가며 다시 진행하면 같은 메뉴�
   assert.equal(h.state.screen, '수강편람');
   assert.equal(h.state.bubble.target.tip.id, 'menu:기본수업');
   const automaticMenus = h.state.menus.length;
-  await h.advance();
+  assert.equal(h.mode.allow(h.state.bubble.target, { type: 'click' }), true);
+  h.state.screen = '기본수업';
+  await h.flush();
   assert.equal(h.state.screen, '기본수업');
   assert.equal(h.state.bubble.target.tip.id, 'basic.apply');
   assert.equal(h.state.menus.length, automaticMenus, '사용자 메뉴 클릭을 goMenu로 중복 실행하지 않음');
@@ -273,7 +349,7 @@ test('이동 실패 후 재시도하면 첫 단계로 정상 복귀한다', asyn
 });
 
 test('열·이동 메뉴·마지막 요소가 없어도 원문을 생략하지 않고 다음 단계로 진행한다', async t => {
-  for (const id of ['common.col.no', 'menu:기본수업', 'done.type']) {
+  for (const id of ['pyunram.search', 'common.col.no', 'menu:기본수업', 'done.type']) {
     await t.test(id, async () => {
       const h = setup();
       h.state.missing.add(id);
@@ -293,16 +369,30 @@ test('열·이동 메뉴·마지막 요소가 없어도 원문을 생략하지 �
   }
 });
 
-test('건너뛰는 단계(skip)는 요소가 없으면 앞으로도 뒤로도 지나간다', async () => {
+test('없는 희망신청 칸은 다음과 이전 모두 자동으로 건너뛴다', async () => {
   const h = setup();
   h.state.missing.add('basic.hopeAdd'); // 희망신청 기간이 아니라 칸이 없는 기본수업
   await h.start();
   const index = h.mode.steps.findIndex(([id]) => id === 'basic.apply');
   for (let i = 0; i <= index; i++) { await h.advance(); await h.expire(); }
-  assert.equal(h.state.bubble.target.tip.id, 'menu:희망수업', '없는 희망신청 칸은 설명 없이 건너뜀');
+  assert.equal(h.state.bubble.target.tip.id, 'menu:희망수업');
   await h.press('이전');
   await h.expire();
-  assert.equal(h.state.bubble.target.tip.id, 'basic.apply', '이전도 없는 칸을 건너뜀');
+  assert.equal(h.state.bubble.target.tip.id, 'basic.apply');
+  h.SG.stop();
+});
+
+test('희망신청 열 제목만 있고 추가 버튼이 없어도 자동으로 건너뛴다', async () => {
+  const h = setup();
+  h.SG.tipEl(h.mode.tipOf('basic.hopeAdd')).replaceChildren();
+  await h.start();
+  const index = h.mode.steps.findIndex(([id]) => id === 'basic.apply');
+  for (let i = 0; i <= index; i++) await h.advance();
+  await h.expire();
+  assert.equal(h.state.bubble.target.tip.id, 'menu:희망수업');
+  await h.press('이전');
+  await h.expire();
+  assert.equal(h.state.bubble.target.tip.id, 'basic.apply');
   h.SG.stop();
 });
 
@@ -336,7 +426,8 @@ test('[조회] 단계는 검색 영역의 안전한 입력만 허용하고 신�
   await h.flush();
   assert.equal(h.state.bubble.target, search, 'Enter keydown만으로 다음 단계로 넘어가지 않음');
   assert.equal(h.mode.allow(apply, { type: 'click' }), false);
-  await h.advance();
+  assert.equal(h.mode.allow(search, { type: 'click' }), true);
+  await h.flush();
   assert.equal(h.state.bubble.target.tip.id, 'common.col.no');
   h.SG.stop();
 });

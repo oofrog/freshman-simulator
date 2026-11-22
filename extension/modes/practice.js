@@ -99,18 +99,19 @@
   const hostOf = real => real.parentElement.matches('span.btn_common_wrap') ? real.parentElement : real;
   const lookOf = real => ({ wrap: hostOf(real) === real ? '' : real.parentElement.className, btn: real.className.replace(/\{[^}]*\}/, '').trim() });
 
-  // 실제 "시스템 메시지"(jQuery UI 대화상자)와 같은 구조·클래스. [확인]·✕·Enter로 닫힌다
+  // 실제 "시스템 메시지"(jQuery UI 대화상자)와 같은 구조·클래스. [확인]·✕·Enter·Esc로 닫힌다.
+  // 대기 화면·결과창과 함께 core 모달(SG.dialog)로 띄워, 떠 있는 동안 Tab으로 뒤의 가짜 [신청]에 갈 수 없다
   const sysMessage = text => new Promise(done => {
     s.dialog?.remove();
     const ok = h('button', 'ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only', h('span', 'ui-button-text', '확인'));
     const x = h('a', 'ui-dialog-titlebar-close ui-corner-all', h('span', 'ui-icon ui-icon-closethick', 'close'));
-    const box = SG.el('div', { className: 'sg-sys' },
+    const close = () => { box.remove(); done(); };
+    const box = SG.dialog({ className: 'sg-sys' }, [
       h('div', 'ui-widget-overlay'),
       h('div', 'ui-dialog ui-widget ui-widget-content ui-corner-all',
         h('div', 'ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix', h('span', 'ui-dialog-title', '시스템 메시지'), x),
         h('div', 'ui-dialog-content ui-widget-content', document.createElement('br'), text),
-        h('div', 'ui-dialog-buttonpane ui-widget-content ui-helper-clearfix', h('div', 'ui-dialog-buttonset', ok))));
-    const close = () => { box.remove(); done(); };
+        h('div', 'ui-dialog-buttonpane ui-widget-content ui-helper-clearfix', h('div', 'ui-dialog-buttonset', ok)))], close);
     ok.type = 'button';
     ok.addEventListener('click', close);
     x.addEventListener('click', close);
@@ -118,7 +119,6 @@
     ok.addEventListener('blur', () => ok.classList.remove('ui-state-focus'));
     ok.addEventListener('mouseenter', () => ok.classList.add('ui-state-hover'));
     ok.addEventListener('mouseleave', () => ok.classList.remove('ui-state-hover'));
-    document.body.append(box);
     s.dialog = box;
     ok.focus();
   });
@@ -144,7 +144,7 @@
 
   // 대기 화면. 표시 항목(앞 대기 인원, 예상 시간, 진행률, 닫기)은 넷퍼넬 코드 기준이고, 모양과 글자는 실제 템플릿을 못 봐서 임시다.
   // 넷퍼넬 코드에는 뒤 대기 인원도 있지만, 실제 수강신청 화면에서 본 적이 없어 띄우지 않는다 (2026-11-18 팀원 기억)
-  // 줄을 끝까지 기다려야 서버로 간다. [닫기]로 나오면 자리를 잃고, 다시 누르면 그 신청이 닿는 시각에 맨 뒤로 새로 선다
+  // 줄을 끝까지 기다려야 서버로 간다. [닫기]로 나오면 자리를 잃고, 다시 누르면 그 신청이 닿는 시각에 맨 뒤로 새로 선다. Esc로는 나가지 않는다 ([닫기]로만)
   // t·left는 누른 시각이고, 줄은 신청이 서버에 닿은 시각(arrive, 이번 연습의 지연)에 선다
   const enterQueue = (row, t, left) => {
     const me = s, reach = x => arrive(x, me.start.lag);
@@ -158,16 +158,15 @@
     };
     // 안내 문구는 실제 화면에 없는, 연습용으로 넣은 것
     const note = first > stayed ? [h('p', 'sg-wait-note', `[닫기]로 줄에서 나와 맨 뒤로 다시 섰어요. 그대로 기다렸다면 대기자 ${stayed}명이었는데 지금은 ${first}명입니다.`)] : [];
-    const box = SG.el('div', { className: 'sg-wait' },
+    me.dialog?.remove();
+    const box = SG.dialog({ className: 'sg-wait' }, [
       h('div', 'sg-wait-box',
         h('b', '', '접속 대기 중입니다'),
         h('p', '', '예상 대기 시간 ', time),
         h('div', 'sg-wait-track', bar),
         h('p', '', '대기자 ', ahead, '명'),
         ...note,
-        h('div', 'sg-row', SG.el('button', { className: 'sg-btn', textContent: '닫기', onclick: leave }))));
-    me.dialog?.remove();
-    document.body.append(box);
+        h('div', 'sg-row', SG.el('button', { className: 'sg-btn', textContent: '닫기', onclick: leave })))]);
     me.dialog = box;
     const tick = () => {
       const q = queueAt(at, elapsed(me));
@@ -191,7 +190,7 @@
     return queueAt(arrive(t, s.start.lag)).wait > 0 ? enterQueue(row, t, left) : submit(row, t);
   };
 
-  // 결과 요약: 누른 과목만 결과·누른 시각(시계 시각)·마감까지 여유·늦음. [다시 하기]는 처음부터(지연·마감도 새로 뽑음), [닫기]는 연습을 끝내고 화면을 되돌린다
+  // 결과 요약: 누른 과목만 결과·누른 시각(시계 시각)·마감까지 여유·늦음. [다시 하기]는 처음부터(지연·마감도 새로 뽑음), [닫기]·Esc는 연습을 끝내고 화면을 되돌린다
   // [연습 끝내기]에 포커스가 남아 Enter·Space로 다시 눌릴 수 있으므로 한 번만 띄운다
   // 요약 줄: 성공·정원 초과는 늘, 너무 일찍 누름·학수번호·학점·시간으로 막힌 결과는 있을 때만. 그 뒤에 안 누른 과목 수와 이번 지연
   // 지연은 연습마다 달라서, 같은 시각에 눌렀는데 결과가 다른 이유를 알 수 있게 보여 준다. 마감도 매번 달라 여유·늦음을 보여 줘도 외울 수 없다
@@ -220,19 +219,19 @@
       h('thead', '', h('tr', '', ...['과목', '결과', '누른 시각', ''].map(t => h('th', '', t)))),
       h('tbody', '', ...pressed.map(r => h('tr', '', td(r.label), td(RESULT[r.result], r.result), td(clock(r.at)), td(gapText(r))))));
     const button = (text, onclick) => SG.el('button', { className: 'sg-btn', textContent: text, onclick });
-    const box = SG.el('div', { className: 'sg-result' },
+    const box = SG.dialog({ className: 'sg-result' }, [
       h('div', 'sg-box',
         h('b', '', '연습 결과'),
         h('p', '', line),
         ...(pressed.length ? [table] : []),
-        h('div', 'sg-row', button('다시 하기', () => SG.start('practice')), button('닫기', () => SG.stop()))));
-    document.body.append(box);
+        h('div', 'sg-row', button('다시 하기', () => SG.start('practice')), button('닫기', () => SG.stop())))], () => SG.stop());
     me.extras.push(box);
   };
 
   // 네이비즘식 서버 시계 창 (실제 화면에 없는 연습용). 10:59:55.000부터 밀리초까지 흐르고 11:00:00.000에 신청이 열린다.
   // 열리는 순간 따로 알려 주지 않는다: 실제처럼 시계만 보고 누른다. 그래서 [연습 끝내기]도 처음부터 띄워 둔다 (열릴 때 창 모양이 바뀌지 않게)
-  // 상태 바는 쓰지 않는다 (start에서 SG.bar(false)). 시스템 메시지·대기 화면이 떠 있어도 시계가 보이도록 그 위에 둔다 (결과 요약보다는 아래)
+  // 상태 바는 쓰지 않는다 (start에서 SG.bar(false)). 시스템 메시지·대기 화면·결과창은 core 모달(SG.dialog)이라 항상 시계 위에 그려진다.
+  // 그동안 시계는 반투명 배경 아래로 보이고 [연습 끝내기]는 눌리지 않는다 (모달을 닫은 뒤에 누른다. core 상태 바의 [끝내기]와 같은 규칙)
   const run = me => {
     me.openAt = performance.now() + LEAD * 1000;
     const time = h('span', ''), milli = h('small', '');
@@ -352,7 +351,6 @@
       s.dialog?.remove();
       s = null;
     },
-    // Esc는 시스템 메시지만 닫고 연습은 계속 (대기 화면은 [닫기]로만 나간다). 결과창이 떠 있으면 [닫기]와 같다
-    escape() { if (s?.done) return SG.stop(); if (!s?.queue) s?.dialog?.remove(); },
+    // Esc는 core가 맨 위 모달에 맞게 처리한다 (시스템 메시지는 닫고 연습은 계속, 대기 화면은 그대로, 결과창은 [닫기]와 같음)
   });
 })();
