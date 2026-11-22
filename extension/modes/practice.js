@@ -1,13 +1,17 @@
-// 실전 재현 모드 (#8·#9, 담당: 박태현)
-// 희망수업의 [신청]을 가짜 버튼으로 바꾸고(이미 신청해서 버튼이 없는 행에도 넣음), 카운트다운 뒤 신청이 열린다.
+// 실전 재현 모드 (#8·#9·#29, 담당: 박태현)
+// 희망수업의 [신청]을 가짜 버튼으로 바꾸고(이미 신청해서 버튼이 없는 행에도 넣음), 오른쪽 위에 밀리초까지 흐르는 서버 시계를 띄운다 (#29).
+// 시계는 10:59:55.000에서 시작하고 11:00:00.000에 신청이 열린다. [신청]은 누른 시각에 지연(engine.js NET.lag)을 더한 서버 도착 시각으로 판정해서
+// 실제처럼 열리기 직전에 미리 눌러야 하고, 너무 일찍 누르면 기간이 아니라고 나온다.
+// 시계 창은 실제 화면에 없는 연습용이다 (실제로는 네이비즘 같은 서버 시간 사이트를 다른 창에 띄워 놓고 본다).
 // 실제 화면처럼 남은 자리는 보여 주지 않고, 마감 여부는 [신청]을 눌렀을 때 메시지로만 알려 준다.
-// 시작 배너 옆의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 누른 시각과 마감 시각)을 띄운다.
+// 시계 창의 [연습 끝내기]를 누르면 결과 요약(과목별 성공·실패, 누른 시각·서버 도착·마감 시각)을 띄운다.
 // 정원 말고도 같은 학수번호(다른 분반)·학점 초과·시간 중복이면 신청이 막힌다 (#6). 재수강은 지난 수강 기록이 없어 재현하지 않는다
-// 마감 시각·신청 판정·결과 요약 계산은 화면과 분리된 engine.js (SG.engine)
+// 마감 시각·신청 판정·결과 요약 계산·시계 글자는 화면과 분리된 engine.js (SG.engine)
 // 메시지는 실제 화면의 "시스템 메시지"와 같은 모양으로 띄운다. 실제 화면 정리·아직 필요한 데이터: docs/real-screen.md
 (() => {
-  const COUNTDOWN = 5; // 시작 전 카운트다운(초)
-  const { closeSec, replay, summarize, queueAt, parseTimes } = SG.engine;
+  const LEAD = 5; // 시계를 신청이 열리기 몇 초 전부터 보여 줄지 (5초 → 10:59:55.000부터)
+  const { NET, arrive, clock, closeSec, replay, summarize, queueAt, parseTimes } = SG.engine;
+  const hms = t => clock(t).slice(0, 8); // '11:00:00' (밀리초 뺀 시계 글자)
 
   // 신청 결과 문구는 서버가 보내 줘서 화면 코드에 없다. 실제 문구를 확인하기 전까지 임시.
   const MSG = {
@@ -41,8 +45,14 @@
     .sg-result th,.sg-result td{border:1px solid #ddd;padding:4px 8px;text-align:center;font-size:12px}
     .sg-result th{background:#f3f4f6}
     .sg-result td.done{color:#15803d;font-weight:bold}
-    .sg-result td.full,.sg-result td.same,.sg-result td.credit,.sg-result td.time{color:#dc2626;font-weight:bold}
-    .sg-result td.none{color:#888}`;
+    .sg-result td.full,.sg-result td.notOpen,.sg-result td.same,.sg-result td.credit,.sg-result td.time{color:#dc2626;font-weight:bold}
+    .sg-result td.none{color:#888}
+    .sg-result .sg-note{color:#6b7280;font-size:12px}
+    .sg-clock[data-sg]{position:fixed;top:12px;right:12px;z-index:2147483646;background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:10px 16px 12px;box-shadow:0 4px 16px #0003;text-align:center;user-select:none}
+    .sg-clock-name{color:#6b7280;font-size:12px}
+    .sg-clock-time{color:#111827;font:bold 32px/1.2 Consolas,Menlo,'Courier New',monospace;font-variant-numeric:tabular-nums}
+    .sg-clock-time small{color:#2563eb;font-size:24px}
+    .sg-clock-note{margin:2px 0 8px;color:#6b7280;font-size:12px}`;
   // 목업처럼 jQuery UI 테마 CSS가 없는 화면에서만 넣는다 (값은 실제 화면에서 잰 것)
   const FALLBACK = `
     .sg-sys .ui-widget-overlay{background:#aaa;opacity:.3}
@@ -60,7 +70,8 @@
   const hasTheme = () => [...document.styleSheets].some(sh => /jquery-ui/i.test(sh.href || ''));
 
   // 진행 중인 연습: { rows, clicks, extras, dialog, timer, openAt, done, queue, left, start, credits, creditBox, creditWas }
-  // openAt: 신청이 열리는 performance.now 시각 (카운트다운 전에는 0), clicks: 누른 기록 (엔진 replay·summarize 형식), done: 결과 요약을 띄움
+  // openAt: 신청이 열리는 performance.now 시각 (시계가 뜨기 전에는 0), timer: 시계를 다시 그리는 requestAnimationFrame 번호
+  // clicks: 누른 기록 (엔진 replay·summarize 형식, t는 누른 시각), done: 결과 요약을 띄움
   // queue: 대기 화면 타이머 (0이면 대기 중 아님), left: [닫기]로 나온 줄에 섰던 시각 (없으면 null)
   // start: 엔진에 넘기는 { credits: 시작 때 신청학점, max: 최대학점 }, credits: 지금 신청학점, creditBox·creditWas: 신청학점 칸과 원래 값
   let s = null;
@@ -113,8 +124,8 @@
   // 신청이 열린 뒤 지난 시간(초). 열리기 전은 음수
   const elapsed = me => me.openAt ? (performance.now() - me.openAt) / 1000 : -Infinity;
 
-  // 대기열을 통과해 서버에 도착한 신청. 판정은 줄을 선(누른) 시각으로 하고, 기간 → 학수번호·학점·시간 → 정원 순서로 본다 (엔진 replay).
-  // 마감이나 막힌 신청은 실제 화면처럼 [신청]이 그대로 남는다
+  // 대기열을 통과해 서버에 도착한 신청. t는 누른 시각이고, 판정은 서버에 닿아 줄을 선 시각(arrive)으로 한다.
+  // 기간 → 학수번호·학점·시간 → 정원 순서로 본다 (엔진 replay). 마감이나 막힌 신청은 실제 화면처럼 [신청]이 그대로 남는다
   const submit = (row, t) => {
     s.clicks.push({ course: s.rows.indexOf(row), t });
     const result = replay(s.rows, s.clicks, s.start).at(-1);
@@ -131,9 +142,10 @@
 
   // 대기 화면. 표시 항목(앞 대기 인원, 예상 시간, 진행률, 닫기)은 넷퍼넬 코드 기준이고, 모양과 글자는 실제 템플릿을 못 봐서 임시다.
   // 넷퍼넬 코드에는 뒤 대기 인원도 있지만, 실제 수강신청 화면에서 본 적이 없어 띄우지 않는다 (2026-11-18 팀원 기억)
-  // 줄을 끝까지 기다려야 서버로 간다. [닫기]로 나오면 자리를 잃고, 다시 누르면 그 시각에 맨 뒤로 새로 선다
+  // 줄을 끝까지 기다려야 서버로 간다. [닫기]로 나오면 자리를 잃고, 다시 누르면 그 신청이 닿는 시각에 맨 뒤로 새로 선다
+  // t·left는 누른 시각이고, 줄은 신청이 서버에 닿은 시각(arrive)에 선다
   const enterQueue = (row, t, left) => {
-    const me = s, first = queueAt(t).ahead, stayed = left === null ? first : queueAt(left, t).ahead;
+    const me = s, at = arrive(t), first = queueAt(at).ahead, stayed = left === null ? first : queueAt(arrive(left), at).ahead;
     const time = h('b', ''), ahead = h('b', ''), bar = h('div', 'sg-wait-bar');
     const leave = () => {
       clearTimeout(me.queue);
@@ -155,7 +167,7 @@
     document.body.append(box);
     me.dialog = box;
     const tick = () => {
-      const q = queueAt(t, elapsed(me));
+      const q = queueAt(at, elapsed(me));
       if (q.wait <= 0) {
         me.queue = 0;
         return submit(row, t);
@@ -173,53 +185,68 @@
     if (s.done || s.queue) return;
     const t = elapsed(s), left = s.left;
     s.left = null;
-    return queueAt(t).wait > 0 ? enterQueue(row, t, left) : submit(row, t);
+    return queueAt(arrive(t)).wait > 0 ? enterQueue(row, t, left) : submit(row, t);
   };
 
-  // 결과 요약: 과목마다 결과·누른 시각·마감·차이. [다시 하기]는 처음부터, [닫기]는 연습을 끝내고 화면을 되돌린다
+  // 결과 요약: 과목마다 결과·누른 시각·서버 도착·마감(모두 시계 시각)·차이. [다시 하기]는 처음부터, [닫기]는 연습을 끝내고 화면을 되돌린다
   // [연습 끝내기]에 포커스가 남아 Enter·Space로 다시 눌릴 수 있으므로 한 번만 띄운다
-  // 정원 초과·성공·안 누름은 늘 보이고, 학수번호·학점·시간으로 막힌 결과는 있을 때만 요약 줄에 보인다
-  const RESULT = { done: '성공', full: '정원 초과', same: '이미 신청', credit: '학점 초과', time: '시간 중복', none: '안 누름' };
+  // 정원 초과·성공·안 누름은 늘 보이고, 너무 일찍 누름·학수번호·학점·시간으로 막힌 결과는 있을 때만 요약 줄에 보인다
+  const RESULT = { done: '성공', full: '정원 초과', notOpen: '기간 아님', same: '이미 신청', credit: '학점 초과', time: '시간 중복', none: '안 누름' };
   const ALWAYS = ['done', 'full', 'none'];
-  const sec = x => `${x.toFixed(2)}초`;
+  const sec = x => `${x.toFixed(3)}초`;
+  // 차이는 서버 도착 시각 기준 (판정이 그 시각으로 나므로). 여유·늦음은 자리를 두고 겨룬 결과(성공·정원 초과)에만, 막힌 신청은 마감과 상관없다
+  const gapText = r => r.result === 'notOpen' ? `${sec(-r.arrive)} 일찍`
+    : r.arrive === null || r.close === Infinity || !['done', 'full'].includes(r.result) ? '—'
+      : r.close > r.arrive ? `${sec(r.close - r.arrive)} 여유` : `${sec(r.arrive - r.close)} 늦음`;
   const finish = me => {
     if (me.done) return;
     me.done = true;
+    cancelAnimationFrame(me.timer); // 시계는 [연습 끝내기]를 누른 시각에 멈춘다
     clearTimeout(me.queue);
     me.queue = 0;
     me.dialog?.remove();
     const sum = summarize(me.rows, me.clicks, me.start);
     const count = k => sum.filter(r => r.result === k).length;
     const td = (text, className = '') => h('td', className, text);
-    const lines = sum.map((r, i) => {
-      // 여유·늦음은 자리를 두고 겨룬 결과(성공·정원 초과)에만. 막힌 신청은 마감과 상관없다
-      const gap = r.at === null || r.close === Infinity || !['done', 'full'].includes(r.result) ? '—'
-        : r.close > r.at ? `${sec(r.close - r.at)} 여유` : `${sec(r.at - r.close)} 늦음`;
-      return h('tr', '', td(me.rows[i].label), td(RESULT[r.result], r.result), td(r.at === null ? '—' : sec(r.at)),
-        td(r.close === Infinity ? '안 참' : sec(r.close)), td(gap));
-    });
+    const lines = sum.map((r, i) => h('tr', '', td(me.rows[i].label), td(RESULT[r.result], r.result),
+      td(r.at === null ? '—' : clock(r.at)), td(r.arrive === null ? '—' : clock(r.arrive)),
+      td(r.close === Infinity ? '안 참' : clock(r.close)), td(gapText(r))));
     const button = (text, onclick) => SG.el('button', { className: 'sg-btn', textContent: text, onclick });
     const box = SG.el('div', { className: 'sg-result' },
       h('div', 'sg-box',
         h('b', '', '연습 결과'),
         h('p', '', Object.keys(RESULT).filter(k => ALWAYS.includes(k) || count(k)).map(k => `${RESULT[k]} ${count(k)}과목`).join(' · ')),
         h('table', '',
-          h('thead', '', h('tr', '', ...['과목', '결과', '누른 시각 (시작 후)', '마감', '차이'].map(t => h('th', '', t)))),
+          h('thead', '', h('tr', '', ...['과목', '결과', '누른 시각', '서버 도착', '마감', '차이'].map(t => h('th', '', t)))),
           h('tbody', '', ...lines)),
+        h('p', 'sg-note', `서버 도착 = 누른 시각 + ${NET.lag}초 (누른 뒤 서버에 닿기까지 걸린다고 가정한 시간). 판정과 차이는 서버 도착 기준이에요.`),
         h('div', 'sg-row', button('다시 하기', () => SG.start('practice')), button('닫기', () => SG.stop()))));
     document.body.append(box);
     me.extras.push(box);
   };
 
-  // 카운트다운·[연습 끝내기]는 core 상태 바(SG.bar)에 표시한다
+  // 네이비즘식 서버 시계 창 (실제 화면에 없는 연습용). 10:59:55.000부터 밀리초까지 흐르고 11:00:00.000에 신청이 열린다.
+  // 열리는 순간 따로 알려 주지 않는다: 실제처럼 시계만 보고 누른다. 그래서 [연습 끝내기]도 처음부터 띄워 둔다 (열릴 때 창 모양이 바뀌지 않게)
+  // 상태 바는 쓰지 않는다 (start에서 SG.bar(false)). 시스템 메시지·대기 화면이 떠 있어도 시계가 보이도록 그 위에 둔다 (결과 요약보다는 아래)
   const run = me => {
-    me.openAt = performance.now() + COUNTDOWN * 1000;
-    // 숫자가 바뀌는 순간에 맞춰 다시 부른다. 인기 과목은 0.3초쯤에 마감되므로 '시작!'이 늦게 뜨면 안 된다
+    me.openAt = performance.now() + LEAD * 1000;
+    const time = h('span', ''), milli = h('small', '');
+    const box = SG.el('div', { className: 'sg-clock' },
+      h('div', 'sg-clock-name', '서버 시간'),
+      h('div', 'sg-clock-time', time, milli),
+      h('div', 'sg-clock-note', `${hms(0)}에 신청이 열려요`),
+      SG.el('button', { className: 'sg-btn', textContent: '연습 끝내기', onclick: () => finish(me) }));
+    document.body.append(box);
+    me.extras.push(box);
+    // 오른쪽 위에 두되 학점 칸(.hakjeom-area, 실제·목업 공통)은 가리지 않게 그 아래로 내린다. 신청에 성공하면 신청학점이 바뀌는 걸 봐야 해서
+    const credits = document.querySelector('.hakjeom-area')?.getBoundingClientRect();
+    box.style.top = `${Math.max(12, Math.min((credits?.bottom ?? 0) + 12, innerHeight - box.offsetHeight - 12))}px`;
+    // 화면을 그릴 때마다 (보통 1초에 60번) 새로 쓴다
     const tick = () => {
-      const t = elapsed(me);
-      if (t >= 0) return SG.bar({ text: '수강신청 시작!', buttons: [['연습 끝내기', () => finish(me)]] });
-      SG.bar({ text: `수강신청 시작까지 ${Math.ceil(-t)}초` });
-      me.timer = setTimeout(tick, (-t % 1 || 1) * 1000 + 1);
+      const [a, b] = clock(elapsed(me)).split('.');
+      time.textContent = a;
+      milli.textContent = `.${b}`;
+      me.timer = requestAnimationFrame(tick);
     };
     tick();
   };
@@ -279,24 +306,27 @@
       if (me.creditBox) me.creditBox.value = String(me.credits);
       console.table(me.rows.map(r => {
         const close = closeSec(r.hope, r.cap);
-        return { 과목: r.name, 희망: r.hope, 제한: r.cap, '마감(초)': close === Infinity ? '마감 안 됨' : +close.toFixed(1) };
+        return { 과목: r.name, 희망: r.hope, 제한: r.cap, '마감 (서버 도착 기준)': close === Infinity ? '마감 안 됨' : clock(close) };
       }));
 
       const style = SG.el('style', { textContent: CSS + (hasTheme() ? '' : FALLBACK) });
       document.head.append(style);
       me.extras.push(style);
 
-      SG.bar(false); // 시작 안내 중에는 상태 바를 숨기고, 카운트다운부터 띄운다
+      SG.bar(false); // 상태 바는 쓰지 않는다. 시계와 [연습 끝내기]는 [시작]을 누르면 뜨는 시계 창에 있다
       await SG.modal({
         title: '실전 재현',
-        text: `희망수업의 [신청] 버튼으로 실제처럼 연습합니다.\n[시작]을 누르면 ${COUNTDOWN}초 뒤에 신청이 열려요.\n실제처럼 남은 자리는 보이지 않고, 마감 여부는 [신청]을 눌러야 알 수 있어요.`,
+        text: `희망수업의 [신청] 버튼으로 실제처럼 연습합니다.\n`
+          + `[시작]을 누르면 오른쪽 위 서버 시간이 ${hms(-LEAD)}부터 흐르고, ${hms(0)}에 신청이 열려요.\n`
+          + `[신청]은 누른 뒤 서버에 닿기까지 시간이 걸려서, ${hms(0)}에 맞춰 누르면 늦을 수 있어요. 너무 일찍 누르면 신청 기간이 아니라고 나와요.\n`
+          + '실제처럼 남은 자리는 보이지 않고, 마감 여부는 [신청]을 눌러야 알 수 있어요.',
         buttons: ['시작'],
       });
       if (s === me) run(me);
     },
     stop() {
       if (!s) return;
-      clearTimeout(s.timer);
+      cancelAnimationFrame(s.timer);
       clearTimeout(s.queue);
       s.rows.forEach(r => {
         r.fake.remove();
