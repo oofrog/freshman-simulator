@@ -207,18 +207,57 @@ test('조회와 초기화가 같은 칸에 있어도 조회 버튼만 강조하�
 test('버튼을 포함한 셀 전체를 안내하지만 신청 버튼 실행은 막는다', async () => {
   const h = setup();
   const button = new Element('input', { type: 'button' });
+  const applied = new Element('td'); // 이미 신청해 [신청]이 없는 행
   const cell = new Element('td', {}, button);
-  h.SG.rows = () => [new Element('tr', {}, cell)];
-  h.SG.cell = () => cell;
-  h.SG.buttons = () => [button];
+  const rows = [new Element('tr', {}, applied), new Element('tr', {}, cell)];
+  const cellOf = h.SG.cell;
+  h.SG.rows = () => rows;
+  h.SG.cell = (tr, column) => column === '수강신청' ? tr.children[0] : cellOf(tr, column);
   await h.start();
-  await h.advance();
+  const index = h.mode.steps.findIndex(([id]) => id === 'basic.apply');
+  for (let i = 0; i < index; i++) await h.advance();
+  assert.equal(h.state.bubble.options.title, h.mode.tipOf('basic.apply').title);
   assert.equal(h.state.bubble.target, cell);
   assert.equal(h.mode.allow(button, { type: 'click' }), false);
   assert.equal(h.mode.allow(cell, { type: 'click' }), false);
-  await h.advance();
-  assert.equal(h.state.bubble.options.title, h.mode.tipOf('common.col.code').title);
   h.SG.stop();
+});
+
+// 열 설명 단계(수업번호)에서 말풍선이 붙는 곳 (#34)
+const columnTarget = async rows => {
+  const h = setup();
+  h.SG.rows = () => rows.map(td => new Element('tr', {}, td));
+  h.SG.cell = tr => tr.children[0];
+  await h.start();
+  await h.advance();
+  assert.equal(h.state.bubble.options.title, h.mode.tipOf('common.col.no').title);
+  const target = h.state.bubble.target;
+  h.SG.stop();
+  return { h, target };
+};
+
+test('열 설명은 열 제목 대신 첫 행의 칸을 가리킨다', async () => {
+  const first = new Element('td', { textContent: '10001', innerText: '10001' });
+  const { target } = await columnTarget([first, new Element('td', { textContent: '10002', innerText: '10002' })]);
+  assert.equal(target, first);
+});
+
+test('열 설명은 첫 행 칸이 비어 있으면 내용이 있는 다음 행의 칸을 가리킨다', async () => {
+  const filled = new Element('td', { textContent: 'Y', innerText: 'Y' });
+  const { target } = await columnTarget([
+    new Element('td', { textContent: ' ', innerText: ' ' }),
+    new Element('td', { textContent: '숨김', innerText: '' }), // 숨긴 글자만 있는 칸
+    filled,
+  ]);
+  assert.equal(target, filled);
+});
+
+test('열 설명은 행이 없거나 모든 칸이 비어 있으면 열 제목을 가리킨다', async () => {
+  for (const rows of [[], [new Element('td', { textContent: '', innerText: '' })]]) {
+    const { h, target } = await columnTarget(rows);
+    assert.equal(target, h.SG.tipEl(h.mode.tipOf('common.col.no')));
+    assert.equal(target.tagName, 'TH');
+  }
 });
 
 test('이전은 앞 화면으로 돌아가며 다시 진행하면 같은 메뉴를 한 번만 누른다', async () => {

@@ -3,15 +3,17 @@
 //   수강편람 → 기본수업 → 희망수업 → 수강신청 → 신청내역 → 끝 모달
 // 말풍선 문구는 tips.js의 title·text를 그대로 쓴다 (화면 이동 단계만 navTip의 이동 안내). 진행과 조작 안내는 별도 패널에 표시한다.
 (() => {
-  // 단계 = [tips.js의 팁 id, 넘어가는 동작]
+  // 단계 = [tips.js의 팁 id, 넘어가는 동작, ('optional')]
   //   'next'  말풍선의 [다음]  (두 번째로 보인 단계부터는 [이전]도 있어, 다른 화면의 단계면 그 화면으로 돌아간다)
-  //   'click' 강조된 요소를 사용자가 직접 누름 (그 요소만 클릭 허용). 서버 상태를 바꾸지 않는 메뉴·[조회]에만 쓴다.
+  //   'click' 강조된 요소를 사용자가 직접 누름 ([다음]도 가능, 클릭은 그 요소만 허용). 서버 상태를 바꾸지 않는 메뉴·[조회]에만 쓴다.
   //           메뉴 팁(find.menu)이면 그 화면으로 바뀔 때까지 기다린다.
+  //   세 번째 칸 'optional': 그 열에 보이는 input 버튼([추가] 등)이 없으면 단계를 통째로 건너뛴다 ([이전]으로 돌아올 때도)
+  // 열 팁은 열 제목 대신 내용이 있는 첫 행의 칸을 강조한다 (말풍선이 그 값을 가리지 않게, #34). 행이 없으면 열 제목.
   // 화면에 요소가 없으면 화면 제목 옆에서 같은 팁을 읽고 [다음]으로 진행한다.
   // 화면 이동 단계: 왼쪽 메뉴는 자유 팁에서도 직접 눌러 이동하는 요소(SG.tryable)라 tips.js에 팁이 없다 (#19).
   // 그래서 설명 대신 이동 안내만 보여 주고, 이 안내 문구는 tips.js가 아닌 여기(navTip)에 둔다
   const move = name => [`menu:${name}`, 'click'];
-  // [팁 id, 넘어가는 동작('next' 버튼 | 'click' 직접 누르기도 허용)]
+  // [팁 id, 넘어가는 동작('next' 버튼 | 'click' 직접 누르기도 허용), ('optional' 버튼이 없으면 건너뜀)]
   const STEPS = [
     ['pyunram.search', 'click'], // 검색 조건을 바꿔 본 뒤 [조회]를 직접 누름
     ['common.col.no', 'next'],
@@ -34,6 +36,7 @@
   const FIRST = '수강편람';
   const NAV_MS = 10000; // 화면 이동을 기다리는 최대 시간 (실제 화면은 서버 응답을 기다림)
   const FIND_MS = 1500; // 요소가 그려지길 기다리는 시간. 넘으면 화면 제목에 설명 표시
+  const SKIP_MS = 300;  // 'optional' 단계는 오래 기다리지 않는다 (같은 화면의 표는 이미 그려져 있음)
   const MOVE_MS = 450;  // 강조 테두리가 다음 요소로 날아가는 시간
   const EASE = `${MOVE_MS}ms cubic-bezier(.2,.8,.2,1)`;
   // 강조 테두리 바깥을 어둡게 하는 그림자. 비우면 화면이 어두워지지 않는다 (어둡게: ',0 0 0 9999px #0000002e')
@@ -60,7 +63,7 @@
     .sg-ring.end .sg-ring-tag{left:auto;right:-3px}
     .sg-ring.below .sg-ring-tag{bottom:auto;top:100%;margin:8px 0 0}
     .sg-ring-tag[data-sg]{display:none;position:absolute;left:-3px;bottom:100%;margin-bottom:8px;width:max-content;max-width:min(240px,calc(100vw - 32px));white-space:normal;padding:8px 12px;border-radius:8px;background:#1e40af;color:#fff;font-size:14px;line-height:1.5;font-weight:bold;box-shadow:0 2px 8px #0004}
-    /* 직접 누르는 단계: 파란 테두리가 맥박처럼 퍼지고 "직접 눌러 보세요" 표가 붙는다 ([다음] 단계는 주황 고정) */
+    /* 직접 누르는 단계: 파란 테두리가 맥박처럼 퍼지고 "[대상] 클릭" 표가 붙는다 ([다음] 단계는 주황 고정) */
     .sg-ring.act{border-color:#2563eb;animation:sg-pulse 1.2s ease-out infinite}
     .sg-ring.act .sg-ring-tag{display:block}
     @keyframes sg-pulse{0%{box-shadow:0 0 0 0 #2563ebaa${DIM}}70%,100%{box-shadow:0 0 0 14px #2563eb00${DIM}}}
@@ -139,14 +142,17 @@
     ring.classList.toggle('wait', false);
     ring.classList.toggle('off', false);
   };
-  // 열 팁인데 그 열 칸에 버튼이 있으면(수강신청의 [신청], 희망신청의 [추가] 등) 머리글 대신 첫 번째로 보이는 실제 버튼을 강조.
-  // 이미 신청해 [신청]이 없는 행은 건너뛰고, 버튼이 있는 행이 없으면 null (머리글 강조)
-  const buttonIn = tip => {
+  // 열 팁이 가리킬 칸: 내용(글자나 보이는 버튼)이 있는 첫 행의 칸. 열 제목을 가리키면 말풍선이 바로 아래 값을 가리기 때문 (#34).
+  // 빈 칸(이미 신청해 [신청]이 없는 행, 값이 없는 공학인증 등)은 다음 행을 보고, 그런 칸이 없으면 null (열 제목을 가리킴).
+  // button이면 [신청]·[추가] 같은 input 버튼이 있는 칸만 찾는다 (돋보기 같은 <button>은 빼고)
+  const cellIn = (tip, button = false) => {
     if (!tip.find.column || !SG.rows) return null;
     for (const tr of SG.rows()) {
       const td = SG.cell(tr, tip.find.column);
-      const btn = td && SG.buttons(td).find(b => b.matches('input')); // 돋보기 같은 <button>은 빼고 [신청]·[추가] 같은 input 버튼만
-      if (btn) return btn;
+      if (!td) continue;
+      const buttons = SG.buttons(td);
+      const text = (td.innerText ?? td.textContent ?? '').trim(); // innerText: 숨긴 글자는 내용으로 치지 않음
+      if (button ? buttons.some(b => b.matches('input')) : text || buttons.length) return td;
     }
     return null;
   };
@@ -224,7 +230,7 @@
       panel.setAttribute('aria-label', '튜토리얼 진행 안내');
       // 테두리는 첫 단계 전까지 감춰 두고(화면 이동 중 노란 테두리가 멈춰 있지 않게) (DIM이 있으면) 어두운 배경만 바로 깐다.
       // 첫 단계에서 테두리는 첫 요소 자리에 바로 나타나고, 말풍선은 그 요소에서 커지며 나온다
-      ring = SG.el('div', { className: 'sg-ring off wait' }, SG.el('span', { className: 'sg-ring-tag', textContent: '👆 여기를 직접 눌러 보세요' }));
+      ring = SG.el('div', { className: 'sg-ring off wait' }, SG.el('span', { className: 'sg-ring-tag' })); // 글자는 단계마다 `[대상] 클릭`으로 채움
       document.body.append(ring);
       from = null;
       document.head.append(style);
@@ -262,14 +268,17 @@
           if (!await goTo(screens[i])) return;
           const tip = tipOf(id);
           if (!tip) throw new Error(`설명 데이터를 찾지 못했어요: ${id}`);
-          const findTarget = () => optional ? buttonIn(tip) : SG.tipEl(tip);
-          await until(findTarget, optional ? 300 : FIND_MS);
+          // 열 팁은 첫 행 칸(없으면 열 제목), 그 밖의 팁은 그 요소. 조회는 초기화와 같은 칸에 있어도 버튼만 강조한다.
+          const findTarget = () => optional ? cellIn(tip, true) : cellIn(tip) || SG.tipEl(tip);
+          await until(findTarget, optional ? SKIP_MS : FIND_MS);
           if (!alive()) return;
           const found = findTarget();
-          if (!found && optional) { i += direction; continue; }
-          const action = (found && buttonIn(tip)) || found;
-          // 표의 열 설명만 칸 전체를 강조한다. 조회는 초기화와 같은 칸에 있어도 버튼만 강조한다.
-          const el = (tip.find.column && action?.closest?.('td, th')) || action || document.querySelector('#hyinContents h3') || panel;
+          if (!found && optional) {
+            if (i + direction < 0) direction = 1; // 첫 단계를 건너뛰며 [이전]으로 왔으면 앞으로 넘어간다
+            i += direction;
+            continue;
+          }
+          const el = found || document.querySelector('#hyinContents h3') || panel;
 
           const direct = how === 'click' && !!found;
           const go = direct && tip.find.menu; // 다음 화면으로 넘어가는 단계
@@ -293,7 +302,7 @@
           markButtons();
           glide(el);
           const pressed = await wait(direct
-            ? Promise.race([bubble, new Promise(done => { target = action; clicked = () => done('click'); })])
+            ? Promise.race([bubble, new Promise(done => { target = found; clicked = () => done('click'); })])
             : bubble);
           if (!alive()) return;
           target = clicked = null;
