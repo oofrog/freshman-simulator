@@ -2,7 +2,7 @@
 // 완료 조건: 같은 학수번호(다른 분반)·학점 초과·시간 중복 상황을 만들면 그 결과가 나온다
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { closeSec, parseTimes, clash, blocked, replay, summarize } = require('../extension/engine.js');
+const { NET, arrive, closeSec, parseTimes, clash, blocked, replay, summarize } = require('../extension/engine.js');
 
 // 판정용 고정 데이터. 희망수업 화면 데이터와 상관없이 상황마다 일부러 만든 과목이다 (화면 데이터가 바뀌어도 그대로 둔다)
 // [이름, 학수번호, 학점, 수업시간, 희망인원, 제한인원]
@@ -24,8 +24,10 @@ const at = id => {
   return i;
 };
 const course = id => COURSES[at(id)];
-// 과목을 누른 순서대로 (모두 시작 직후 0.01초 — 아직 마감 전)
-const clicks = (...ids) => ids.map(id => ({ course: at(id), t: 0.01 }));
+// 서버에 s초에 닿도록 누르는 시각 (판정은 누른 시각이 아니라 서버 도착 시각으로 하므로, 지연 값과 상관없이 같은 상황을 만든다)
+const press = s => s - NET.lag;
+// 과목을 누른 순서대로 (모두 열린 직후 0.01초에 서버에 닿음 — 아직 마감 전)
+const clicks = (...ids) => ids.map(id => ({ course: at(id), t: press(0.01) }));
 const run = (...ids) => replay(COURSES, clicks(...ids), START);
 
 test('수업시간은 쉼표·공백으로 나뉘거나 붙어 있는 형식을 모두 읽는다', () => {
@@ -80,7 +82,7 @@ test('막힌 신청은 학점·시간표에 들어가지 않는다', () => {
 
 test('막히는 이유는 학수번호 → 학점 → 시간 → 정원 순서로 본다 (실제 순서는 모름, 임시)', () => {
   const late = 600; // 인기 과목은 마감된 뒤
-  const k = (id, t = 0.01) => ({ course: at(id), t });
+  const k = (id, t = 0.01) => ({ course: at(id), t: press(t) }); // t: 서버에 닿는 시각
   // 시간도 겹치고 학수번호도 같음 → same
   assert.ok(clash(course('b1').times, course('b3').times), 'b1과 b3은 시간이 겹치는 과목');
   assert.deepEqual(replay(COURSES, [k('b1'), k('b3')], START), ['done', 'same']);
@@ -94,19 +96,19 @@ test('막히는 이유는 학수번호 → 학점 → 시간 → 정원 순서�
   assert.deepEqual(replay(COURSES, [k('b2'), k('b1', -1)], START), ['done', 'notOpen']);
 });
 
-test('결과 요약은 화면과 같은 판정(replay)을 쓰고, 처음 누른 클릭이 과목 결과를 정한다', () => {
-  const k = (id, t) => ({ course: at(id), t });
+test('결과 요약은 화면과 같은 판정(replay)을 쓰고, 열린 뒤 처음 닿은 클릭이 과목 결과를 정한다', () => {
+  const k = (id, t) => ({ course: at(id), t: press(t) }); // t: 서버에 닿는 시각
   const list = [k('hot', -0.5), k('hot', 0.01), k('b1', 0.05), k('b1', 0.5), k('b2', 0.1), k('b1', 0.2)];
   const results = replay(COURSES, list, START);
   const sum = summarize(COURSES, list, START);
   assert.equal(sum.length, COURSES.length);
   assert.equal(sum[at('hot')].result, 'done');
-  assert.equal(sum[at('hot')].at, 0.01, '시작 전 클릭은 빼고 처음 누른 시각');
+  assert.equal(sum[at('hot')].at, list[1].t, '열리기 전에 닿은 클릭은 빼고 열린 뒤 처음 닿은 클릭의 누른 시각');
   assert.equal(sum[at('b1')].result, 'time', '나중 클릭(같은 학수번호로 막힘)이 아니라 처음 클릭 결과');
   assert.equal(sum[at('b2')].result, 'done');
   assert.equal(sum[at('big')].result, 'none');
   for (const [i, c] of list.entries()) {
-    const first = list.findIndex(x => x.course === c.course && x.t >= 0);
+    const first = list.findIndex(x => x.course === c.course && arrive(x.t) >= 0);
     if (first === i) assert.equal(sum[c.course].result, results[i]);
   }
   assert.deepEqual(summarize(COURSES, list, START), sum, '같은 입력이면 같은 요약');

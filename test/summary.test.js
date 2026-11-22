@@ -1,14 +1,16 @@
 // 결과 요약 판정 스크립트 (#9). 실행: 레포 폴더에서 node --test
 // 완료 조건: 마감 전에 누르면 성공, 마감 후에 누르면 정원 마감이 뜨고, 요약에 모든 과목의 결과가 나온다
+// #29부터 판정은 누른 시각이 아니라 서버 도착 시각(누른 시각 + NET.lag)으로 한다. 마감 전·후는 도착 시각 기준
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { closeSec, judge, summarize } = require('../extension/engine.js');
+const { NET, arrive, closeSec, judge, summarize } = require('../extension/engine.js');
 
 // 목업 희망수업 과목 (희망·제한) + 제한 0
 const COURSES = [[176, 40], [140, 25], [95, 40], [70, 80], [52, 45], [38, 45], [64, 50], [5, 0]]
   .map(([hope, cap]) => ({ hope, cap }));
 const close = c => closeSec(c.hope, c.cap);
 const [movie, art, data, history, , , econ] = COURSES.map((_, i) => i); // 과목 번호
+const press = s => s - NET.lag; // 서버에 s초에 닿도록 누르는 시각
 
 test('마감 전에 누르면 성공, 마감 후에 누르면 정원 초과, 시작 전은 기간 아님', () => {
   for (const c of COURSES) {
@@ -30,25 +32,32 @@ test('마감 전에 누르면 성공, 마감 후에 누르면 정원 초과, 시
 
 test('요약에 모든 과목의 결과가 나온다', () => {
   const clicks = [
-    { course: art, t: -0.2 },                  // 시작 전 클릭 (결과에 안 들어감)
-    { course: data, t: close(COURSES[data]) * 0.5 }, // 마감 전 → 성공
-    { course: movie, t: close(COURSES[movie]) + 0.1 }, // 마감 후 → 정원 초과
-    { course: history, t: 3 },                 // 마감 안 되는 과목 → 성공
+    { course: art, t: press(-0.2) },                  // 열리기 전에 닿음 → 기간 아님
+    { course: data, t: press(close(COURSES[data]) * 0.5) }, // 마감 전에 닿음 → 성공
+    { course: movie, t: press(close(COURSES[movie]) + 0.1) }, // 마감 후에 닿음 → 정원 초과
+    { course: history, t: 3 },                        // 마감 안 되는 과목 → 성공
   ];
   const sum = summarize(COURSES, clicks);
   assert.equal(sum.length, COURSES.length, '과목 수만큼 결과가 나와야 한다');
   sum.forEach((r, i) => {
-    assert.ok(['done', 'full', 'none'].includes(r.result), `${i}번 과목 결과: ${r.result}`);
+    assert.ok(['done', 'full', 'notOpen', 'none'].includes(r.result), `${i}번 과목 결과: ${r.result}`);
     assert.equal(r.close, close(COURSES[i]));
   });
   assert.equal(sum[data].result, 'done');
   assert.equal(sum[movie].result, 'full');
   assert.equal(sum[history].result, 'done');
-  assert.equal(sum[art].result, 'none', '시작 전에만 누른 과목은 안 누름');
+  assert.equal(sum[art].result, 'notOpen', '열리기 전에만 닿은 과목은 기간 아님');
+  assert.ok(sum[art].arrive < 0);
   assert.equal(sum[econ].result, 'none', '안 누른 과목도 요약에 나온다');
   assert.equal(sum[econ].at, null);
-  // 화면이 띄운 메시지와 요약이 같은 판정을 쓴다
-  for (const k of clicks.filter(k => k.t >= 0)) assert.equal(sum[k.course].result, judge(COURSES[k.course].hope, COURSES[k.course].cap, k.t));
+  assert.equal(sum[econ].arrive, null);
+  // 누른 시각과 서버 도착 시각을 같이 돌려준다
+  for (const k of clicks) {
+    assert.equal(sum[k.course].at, k.t);
+    assert.equal(sum[k.course].arrive, arrive(k.t));
+  }
+  // 화면이 띄운 메시지와 요약이 같은 판정(서버 도착 시각)을 쓴다
+  for (const k of clicks) assert.equal(sum[k.course].result, judge(COURSES[k.course].hope, COURSES[k.course].cap, arrive(k.t)));
 });
 
 test('같은 입력이면 같은 요약이 나온다', () => {
