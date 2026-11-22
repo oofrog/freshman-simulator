@@ -57,6 +57,10 @@ test('몰리는 동안 늦게 줄을 서면 순번이 뒤로 밀린다 (기본�
   assert.ok(queueAt(1).ahead > stayed, `그대로 ${stayed}명, 다시 서면 ${queueAt(1).ahead}명`);
 });
 
+test('신청이 아직 서버로 가는 중이면(now가 줄 선 시각보다 이르면) 줄을 선 순간 값을 보여 준다 (#29)', () => each(msg => {
+  for (const t of TIMES) for (const early of [0.001, 0.1, 1]) assert.deepEqual(queueAt(t, t - early), queueAt(t), `${msg} t=${t}`);
+}));
+
 test('같은 입력이면 같은 결과', () => each(msg => {
   for (const t of TIMES) assert.deepEqual(queueAt(t, t + 0.5), queueAt(t, t + 0.5), msg);
 }));
