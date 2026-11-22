@@ -2,7 +2,7 @@
 // 완료 조건: 같은 학수번호(다른 분반)·학점 초과·시간 중복 상황을 만들면 그 결과가 나온다
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { NET, arrive, closeSec, parseTimes, clash, blocked, replay, summarize } = require('../extension/engine.js');
+const { arrive, closeSec, parseTimes, clash, blocked, replay, summarize } = require('../extension/engine.js');
 
 // 판정용 고정 데이터. 희망수업 화면 데이터와 상관없이 상황마다 일부러 만든 과목이다 (화면 데이터가 바뀌어도 그대로 둔다)
 // [이름, 학수번호, 학점, 수업시간, 희망인원, 제한인원]
@@ -17,7 +17,8 @@ const COURSES = [
   ['f2', 'E502', 2, '금(10:30-12:00)', 20, 40], // f1이 끝나는 시각에 시작 (안 겹침)
   ['big', 'F601', 3, '화(09:00-12:00)', 20, 40],
 ].map(([id, code, credit, time, hope, cap]) => ({ id, code, credit, times: parseTimes(time), hope, cap }));
-const START = { credits: 0, max: 12 };
+const LAG = 0.25; // 이번 연습의 지연이라고 치는 값 (화면이 연습마다 뽑아 넘기는 값)
+const START = { credits: 0, max: 12, lag: LAG };
 const at = id => {
   const i = COURSES.findIndex(c => c.id === id);
   assert.ok(i >= 0, `없는 과목: ${id}`);
@@ -25,7 +26,7 @@ const at = id => {
 };
 const course = id => COURSES[at(id)];
 // 서버에 s초에 닿도록 누르는 시각 (판정은 누른 시각이 아니라 서버 도착 시각으로 하므로, 지연 값과 상관없이 같은 상황을 만든다)
-const press = s => s - NET.lag;
+const press = s => s - LAG;
 // 과목을 누른 순서대로 (모두 열린 직후 0.01초에 서버에 닿음 — 아직 마감 전)
 const clicks = (...ids) => ids.map(id => ({ course: at(id), t: press(0.01) }));
 const run = (...ids) => replay(COURSES, clicks(...ids), START);
@@ -77,7 +78,7 @@ test('막힌 신청은 학점·시간표에 들어가지 않는다', () => {
   // b1이 시간 중복으로 막혔으니 같은 학수번호의 b2는 막히지 않는다
   assert.deepEqual(run('hot', 'b1', 'b2'), ['done', 'time', 'done']);
   // long(3)이 학점 초과로 막혔으니 신청학점은 3 그대로 → f1(2)은 5학점으로 딱 들어간다
-  assert.deepEqual(replay(COURSES, clicks('hot', 'long', 'f1'), { credits: 0, max: 5 }), ['done', 'credit', 'done']);
+  assert.deepEqual(replay(COURSES, clicks('hot', 'long', 'f1'), { credits: 0, max: 5, lag: LAG }), ['done', 'credit', 'done']);
 });
 
 test('막히는 이유는 학수번호 → 학점 → 시간 → 정원 순서로 본다 (실제 순서는 모름, 임시)', () => {
@@ -87,7 +88,7 @@ test('막히는 이유는 학수번호 → 학점 → 시간 → 정원 순서�
   assert.ok(clash(course('b1').times, course('b3').times), 'b1과 b3은 시간이 겹치는 과목');
   assert.deepEqual(replay(COURSES, [k('b1'), k('b3')], START), ['done', 'same']);
   // 시간이 겹치는데 학점도 넘음 → credit
-  assert.deepEqual(replay(COURSES, [k('hot'), k('b1')], { credits: 7, max: 12 }), ['done', 'credit']);
+  assert.deepEqual(replay(COURSES, [k('hot'), k('b1')], { credits: 7, max: 12, lag: LAG }), ['done', 'credit']);
   // 마감됐는데 시간도 겹침 → time
   assert.ok(closeSec(course('hot').hope, course('hot').cap) < late, 'hot은 마감되는 과목');
   assert.deepEqual(replay(COURSES, [k('b1'), k('hot', late)], START), ['done', 'time']);
@@ -108,7 +109,7 @@ test('결과 요약은 화면과 같은 판정(replay)을 쓰고, 열린 뒤 처
   assert.equal(sum[at('b2')].result, 'done');
   assert.equal(sum[at('big')].result, 'none');
   for (const [i, c] of list.entries()) {
-    const first = list.findIndex(x => x.course === c.course && arrive(x.t) >= 0);
+    const first = list.findIndex(x => x.course === c.course && arrive(x.t, LAG) >= 0);
     if (first === i) assert.equal(sum[c.course].result, results[i]);
   }
   assert.deepEqual(summarize(COURSES, list, START), sum, '같은 입력이면 같은 요약');
