@@ -168,6 +168,3 @@ input.hope-action[type=button] { color: white; border-color: #58a1c6; background
   #logo-area { padding-right: 116px; } /* 오른쪽 위 확장 켜기 버튼(목업 전용)이 학번·성명을 가리지 않게 버튼 폭만큼 비움 */
 }
 
-/* 페이지 링크 (실제 #pagingPanel과 같은 구조) */
-#pagingPanel { padding: 8px 0; text-align: center; }
-#pagingPanel .strong { font-weight: bold; color: #296BAE; }
