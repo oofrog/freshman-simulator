@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사용자 테스트</title>
+<!--
+  사용자 테스트 실험 페이지 (#42). 배포 주소(index.html)는 그대로 두고, 진행자가 이 주소(/mock/lab.html)를 열어 실험한다.
+  위쪽 진행 바 + 아래에 목업(iframe, index.html?log=참가자&seg=단계)을 띄운다. 기록은 목업 안 log.js가 이 브라우저 localStorage에만 남긴다.
+  단계와 안내 문구: lab.js의 STEPS
+-->
+<link rel="icon" href="logo.png">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, "맑은 고딕", sans-serif; color: #111827; background: #f3f4f6; }
+  [hidden] { display: none !important; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 6px; padding: 7px 14px; background: #e5e7eb; color: #111827; }
+  button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+  button.main { background: #2563eb; color: #fff; font-weight: bold; }
+  button.danger { color: #b91c1c; }
+  .card { max-width: 640px; margin: 48px auto; padding: 24px 28px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; }
+  .card h1 { margin: 0 0 4px; font-size: 22px; }
+  .card .sub { margin: 0 0 18px; color: #6b7280; }
+  .card ol { margin: 8px 0 18px; padding-left: 20px; color: #374151; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+  .card input { font: inherit; padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; width: 120px; }
+  .note { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #fffbeb; color: #92400e; }
+  #bar { position: fixed; inset: 0 0 auto; height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: #1f2937; color: #f9fafb; }
+  #bar .who { flex: none; font-weight: bold; color: #fbbf24; }
+  #steps { flex: none; display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+  #steps li { padding: 2px 8px; border-radius: 999px; font-size: 12px; color: #9ca3af; }
+  #steps li.now { background: #2563eb; color: #fff; font-weight: bold; }
+  #steps li.past { color: #d1d5db; }
+  #say { flex: 1; min-width: 0; }
+  #say b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #live { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #9ca3af; }
+  #live.ok { color: #86efac; }
+  #live.over { color: #fca5a5; font-weight: bold; }
+  /* 미션 카드: 목업 위 오른쪽 아래. 왼쪽 메뉴·위쪽 수업번호 입력·조회 조건을 가리지 않게 아래에 두고, 접으면 제목 한 줄만 */
+  #task { position: fixed; right: 16px; bottom: 16px; z-index: 10; width: 380px; max-height: calc(100% - 56px - 32px); overflow: auto;
+    background: #fff; border: 2px solid #2563eb; border-radius: 10px; box-shadow: 0 6px 24px #0003; font-size: 15px; }
+  #task header { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; background: #eff6ff; }
+  #task h2 { flex: 1; margin: 0; font-size: 16px; color: #1e3a8a; }
+  #task button { padding: 4px 10px; font-size: 13px; }
+  #task .body { padding: 10px 14px 12px; }
+  #task .body p { margin: 0 0 6px; }
+  #task ol { margin: 0; padding-left: 22px; line-height: 1.6; }
+  #task li + li { margin-top: 6px; }
+  #task.folded .body { display: none; }
+  #bar button { flex: none; }
+  /* 창이 좁으면 지금 단계만 남긴다 (안내 글자가 눌려 세로로 깨지지 않게) */
+  @media (max-width: 1100px) { #steps li:not(.now) { display: none; } #bar { gap: 10px; } }
+  #bar button:not(.main) { background: #374151; color: #e5e7eb; }
+  #frame { position: fixed; top: 56px; left: 0; width: 100%; height: calc(100% - 56px); border: 0; background: #fff; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 12px; }
+  th, td { border: 1px solid #e5e7eb; padding: 4px 8px; text-align: left; }
+  th { background: #f9fafb; }
+  .scroll { max-height: 50vh; overflow: auto; }
+</style>
+</head>
+<body>
+
+<!-- 시작: 참가자 번호를 넣고 시작 -->
+<section id="start" class="card" hidden>
+  <h1>사용자 테스트</h1>
+  <p class="sub">진행자용 실험 페이지예요. 참가자 화면의 행동이 이 브라우저에만 기록되고, 밖으로 보내지 않아요.</p>
+  <p class="note" style="margin:0 0 12px">참가자가 설문 1페이지(사전 질문)를 다 쓴 뒤 시작하세요. 설문 1번 참가자 번호에는 여기 적은 번호와 똑같이 적어야 해요(기록과 설문을 이 번호로 맞춰요). 설문 탭은 끝날 때까지 닫지 않게 해 주세요.</p>
+  <ol id="plan"></ol>
+  <div class="row">
+    <label>참가자 번호 <input id="pid" placeholder="P1" autocomplete="off"></label>
+    <button id="go" class="main" type="button">시작</button>
+  </div>
+  <div id="old" class="note" hidden>
+    <p id="old-text" style="margin:0 0 8px"></p>
+    <div class="row" style="margin:0">
+      <button id="resume" type="button">이어서 하기</button>
+      <button id="old-json" type="button">기록 내보내기 (JSON)</button>
+      <button id="old-clear" class="danger" type="button">지우고 처음부터</button>
+    </div>
+  </div>
+</section>
+
+<!-- 진행 중: 위쪽 바 + 목업 -->
+<header id="bar" hidden>
+  <span class="who" id="who"></span>
+  <ol id="steps"></ol>
+  <div id="say"><b id="say-text"></b><span id="live"></span></div>
+  <button id="redo" type="button">이 단계 다시</button>
+  <button id="next" class="main" type="button"></button>
+</header>
+<iframe id="frame" title="가짜 수강신청 (실험)" hidden></iframe>
+<aside id="task" aria-labelledby="task-title" hidden>
+  <header><h2 id="task-title"></h2><button id="task-fold" type="button" aria-controls="task-body"></button></header>
+  <div class="body" id="task-body"><p id="task-lead"></p><ol id="task-items"></ol></div>
+</aside>
+
+<!-- 설문: 단계 사이에 구글폼 한 페이지를 쓰는 동안 (목업은 닫고 구간도 끝낸 상태) -->
+<section id="survey" class="card" hidden>
+  <h1 id="survey-title"></h1>
+  <p id="survey-text" style="font-size:16px"></p>
+  <div class="row">
+    <button id="survey-next" class="main" type="button"></button>
+  </div>
+</section>
+
+<!-- 끝: 요약 보기와 내보내기 -->
+<section id="done" class="card" hidden>
+  <h1 id="done-title"></h1>
+  <p class="sub">파일을 내보낸 뒤 다음 참가자로 넘어가세요. 기록은 지우기 전까지 이 브라우저에 남아 있어요.</p>
+  <div class="row">
+    <button id="json" class="main" type="button">기록 내보내기 (JSON)</button>
+    <button id="csv" type="button">요약 CSV</button>
+    <button id="clear" class="danger" type="button">기록 지우기</button>
+    <button id="again" type="button">다음 참가자</button>
+  </div>
+  <div class="scroll"><table id="table"></table></div>
+</section>
+
+<script src="log-summary.js"></script>
+<script src="lab.js"></script>
+</body>
+</html>

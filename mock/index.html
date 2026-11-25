@@ -73,8 +73,10 @@
     </div>
   </form>
 </dialog>
+<!-- 사용자 테스트용 행동 기록 (#42): ?log=P1처럼 열 때만 켜진다. 없으면 아무것도 하지 않는다 -->
+<script src="log.js"></script>
 <script>
-const ME = { dept: '소프트웨어학부', min: 10, max: 20, gyoyangMax: 10 }; // 27학번 1학년, 개강 전 교양 10학점 제한
+const ME ={ dept: '소프트웨어학부', min: 10, max: 20, gyoyangMax: 10 }; // 27학번 1학년, 개강 전 교양 10학점 제한
 
 const K = 'no code name type area dept year cls prof credit lec lab time room cap enrolled hope limit'.split(' ');
 const C = [
@@ -507,7 +509,10 @@ async function devToggle() {
   if (!window.SG) {
     const load = src => new Promise((ok, fail) => document.body.append(Object.assign(document.createElement('script'), { src, onload: ok, onerror: fail })));
     await load('../extension/files.js');
-    for (const f of SG_FILES) await load('../extension/' + f);
+    for (const f of SG_FILES) {
+      await load('../extension/' + f);
+      if (f === 'engine.js') window.SGLOG?.hook(); // ?log: 모드 파일보다 먼저 엔진·모드 등록을 감싼다 (log.js)
+    }
   }
   SG.toggle();
 }
