@@ -7,7 +7,7 @@
   const { summary, csv } = SGLOG_SUMMARY;
   // seg: 기록의 구간 이름, sg: 목업을 열 때 켤 확장 모드 (null이면 꺼진 채), text: 위쪽 바 안내,
   // survey: 이 단계가 끝난 뒤 쓸 구글폼 페이지 (없으면 바로 다음 단계). 설문 1페이지는 시작 전에 쓴다.
-  // task: 오른쪽 아래 미션 카드 (사전·확인 과제. 과목만 다르고 구성·난이도는 같다). 정답은 여기 두지 않는다 → docs/user-test-tasks.md
+  // task: 오른쪽 아래 미션 카드 (사전·확인 과제는 과목만 다르고 구성·난이도가 같다, 자유 팁 과제). 정답은 여기 두지 않는다 → docs/user-test-tasks.md
   // 단계 이름·설문은 구글폼 "AI+X Team 형인"에 맞춘다. 단계를 바꾸려면 여기만 고친다 (구간 이름은 log-summary.js SEGMENTS와 같게)
   const STEPS = [
     { seg: '사전 과제', sg: null, text: '확장 없이, 오른쪽 아래 미션을 해 주세요.', task: {
@@ -29,12 +29,20 @@
         '「프로그래밍기초」 1반을 내가 신청할 수 있는 과목인지 확인해서 말로 알려 주세요. (신청 버튼은 누르지 마세요)',
         '지금 신청된 과목과 총 학점을 확인해 주세요.',
       ] },
-      survey: { page: 2, title: '튜토리얼 체험 후 질문', q: '8~9번' } },
+      survey: { page: 2, title: '튜토리얼 체험 후 질문', q: '8~10번' } },
     { seg: '실전 재현', sg: 'practice', text: '첫 번째는 진행자와 함께 눌러 보는 연습이에요. 그다음 3번을 해 보세요. [결과 보기]를 본 뒤 [다시 하기]로 이어 가요.',
       rounds: 4, warmup: 1, // 1회차는 사용법 설명을 겸한 연습, 2~4회차가 설문 3페이지가 묻는 3회
-      survey: { page: 3, title: '실전 재현 체험 후 질문', q: '10~11번' } },
-    { seg: '자유 팁 과제', sg: 'tip', text: '궁금한 곳을 눌러 설명을 보면서, 진행자가 말하는 과제를 해 주세요.',
-      survey: { page: 4, title: '자유 팁 체험 후 전체 질문', q: '12~16번' } },
+      survey: { page: 3, title: '실전 재현 체험 후 질문', q: '11~12번' } },
+    { seg: '자유 팁 과제', sg: 'tip', text: '궁금한 곳을 눌러 설명을 보면서, 오른쪽 아래 미션을 해 주세요.', task: {
+      title: '자유 팁 과제 (제한 5분)', limit: 300,
+      lead: '화면에서 궁금한 곳을 눌러 설명을 찾아보고, 아래 질문에 말로 답해 주세요.',
+      items: [
+        '「희망수업」 화면에서 「정렬순서」를 정해 두면, 그 순서대로 자동으로 신청되나요?',
+        '「기본수업」 화면 표의 「증원신청」을 하면 수강신청이 바로 확정되나요?',
+        '과목 목록의 「과목상세 정보」 칸에서는 무엇을 알 수 있나요?',
+        '「기본수업」 화면의 [동일/대치 교과목 확인] 버튼은 무엇을 확인하는 버튼인가요?',
+      ] },
+      survey: { page: 4, title: '자유 팁 체험 후 전체 질문', q: '13~17번' } },
   ];
   const surveyName = v => `설문 ${v.page}페이지 「${v.title}」(${v.q})`;
 
@@ -157,6 +165,8 @@
       over = sec > s.task.limit;
       text = `경과 ${mmss(sec)} / ${mmss(s.task.limit)}` + (over ? ' · 시간 지남' : '');
     }
+    // 확장 없이 하는 단계인데 확장 모드가 시작됐으면 알린다 (막지는 않는다)
+    if (!s.sg && list.some(e => e.type === 'mode.start')) { text += ' · 확장이 켜졌어요'; over = true; }
     if (s.rounds) {
       const started = list.filter(e => e.type === 'mode.start' && e.mode === 'practice').length;
       const results = resultsOf(list);
@@ -195,11 +205,19 @@
     frame.src = 'about:blank';
     const v = STEPS[step].survey, to = STEPS[step + 1];
     $('survey-title').textContent = `${P} · 설문 ${v.page}페이지`;
-    $('survey-text').textContent = `${surveyName(v)}을 작성해 주세요. 다 쓰면 [다음] 버튼까지만 누르고 기다려 주세요.`;
+    // 폼 마지막 페이지에는 [다음]이 없고 [제출]만 있다
+    $('survey-text').textContent = to ? `${surveyName(v)}을 작성해 주세요. 다 쓰면 [다음] 버튼까지만 누르고 기다려 주세요.`
+      : `${surveyName(v)}을 작성하고, 다 쓰면 [제출]을 눌러 주세요.`;
     $('survey-next').textContent = `설문 다 썼어요 → ${to ? `${to.seg} 시작` : '실험 끝'}`;
     show('survey');
   };
   $('survey-next').addEventListener('click', () => open(step + 1));
+  // 확장 없이 하는 단계(sg: null)에서는 목업 오른쪽 위 [확장 켜기]를 숨긴다 (참가자가 눌러 확장이 켜지지 않게).
+  // 같은 출처라 목업이 열릴 때마다 여기서 숨긴다 → 배포 주소의 목업 자체는 그대로다
+  frame.addEventListener('load', () => {
+    const s = STEPS[step], btn = (() => { try { return frame.contentDocument?.getElementById('dev-guide'); } catch { return null; } })();
+    if (s && !s.sg && btn) btn.style.setProperty('display', 'none', 'important');
+  });
   // 같은 단계를 처음 화면부터 다시 (구간은 이어지고 기록도 남는다). 주소의 #!화면은 빼고 연다
   $('redo').addEventListener('click', () => {
     if (confirm('이 단계를 처음 화면부터 다시 할까요? 지금까지 기록은 남아요.')) frame.contentWindow.location.replace(url);
