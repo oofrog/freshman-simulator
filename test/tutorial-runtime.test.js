@@ -25,6 +25,7 @@ class Element {
     Object.assign(this, props);
     this.append(...children);
   }
+  click() { this.clicks = (this.clicks || 0) + 1; }
   append(...children) {
     for (const child of children) {
       this.children.push(child);
@@ -200,6 +201,17 @@ test('조회와 초기화가 같은 칸에 있어도 조회 버튼만 강조하�
   assert.equal(h.mode.allow(reset, { type: 'click' }), false);
   assert.equal(h.mode.allow(search, { type: 'click' }), true);
   await h.flush();
+  assert.equal(h.state.bubble.options.title, h.mode.tipOf('common.col.no').title);
+  h.SG.stop();
+});
+
+test('[조회] 단계에서 [다음]을 누르면 조회를 대신 누른 뒤 넘어간다', async () => {
+  const h = setup();
+  const search = h.SG.tipEl(h.mode.tipOf('pyunram.search'));
+  await h.start();
+  assert.equal(h.state.bubble.target, search);
+  await h.press('다음');
+  assert.equal(search.clicks, 1);
   assert.equal(h.state.bubble.options.title, h.mode.tipOf('common.col.no').title);
   h.SG.stop();
 });

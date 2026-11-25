@@ -290,7 +290,7 @@
           fly(el); // core의 outline 강조 대신
           ring.classList.toggle('off', !found);
           show(i, !found ? `현재 화면에는 이 항목이 없어요. 설명을 읽고 [${next}] 버튼을 눌러 주세요.`
-            : filter ? '검색 조건을 바꿔 볼 수 있어요. [조회]를 누르거나 [다음]으로 설명을 이어가세요.'
+            : filter ? '검색 조건을 바꿔 볼 수 있어요. [조회]나 [다음]을 누르면 목록을 불러온 뒤 설명을 이어가요.'
             : direct ? `강조된 [${tip.find.menu || tip.find.button}] 또는 [다음]을 누르면 다음 단계로 이동해요.`
             : `강조된 항목의 설명을 읽고 [${next}] 버튼을 눌러 주세요.`);
           const bubble = SG.bubble(el, { title: tip.title, text: tip.text, buttons: [...back, next] });
@@ -303,6 +303,9 @@
           target = clicked = null;
           filter = null;
           SG.clear();
+          // [조회] 단계에서 [다음]을 눌러도 [조회]를 대신 눌러 목록을 불러온 뒤 넘어간다 (다음 열 설명이 빈 표를 가리키지 않게).
+          // 강조 요소로 잠깐 허용해야 guard를 통과한다
+          if (pressed === next && id === 'pyunram.search' && found) { target = found; found.click(); target = null; }
 
           if (pressed === '이전') { direction = -1; i--; continue; }
           direction = 1;
