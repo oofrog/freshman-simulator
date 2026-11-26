@@ -9,6 +9,16 @@
   알림 문구는 실제 문구를 확인하기 전까지 임시.
 -->
 <link rel="stylesheet" href="mock.css">
+<!-- 방문 수 집계용 Vercel Web Analytics (#45), ?log 실험 접속은 제외 (log.js와 같은 조건). 로컬에서는 script.js가 404인 게 정상 -->
+<script>
+  if (!new URLSearchParams(location.search).has('log')) {
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    const s = document.createElement('script');
+    s.defer = true;
+    s.src = '/_vercel/insights/script.js';
+    document.head.appendChild(s);
+  }
+</script>
 </head>
 <body>
 <div id="logo-area">
